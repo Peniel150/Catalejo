@@ -103,7 +103,7 @@
       if (stock === null) continue;
       const prices = [...text(card).matchAll(PRICE_RE)].map((x) => parseIntCL(x[1])).filter((n) => n && n > 0);
       const heading = card.querySelector("h1,h2,h3,h4,h5,[title]");
-      const nameCandidates = lines(card).filter((l) => !/\$|stock|disponible|inventario|agregar|importar|ver m[aá]s|bodega/i.test(l) && l.length >= 4);
+      const nameCandidates = lines(card).filter((l) => !/\$|stock|disponible|inventario|agregar|importar|ver m[aá]s|bodega|proveedor/i.test(l) && l.length >= 4);
       const name = (heading && (heading.getAttribute("title") || text(heading).trim())) || nameCandidates.sort((a, b) => b.length - a.length)[0] || null;
       if (!name) continue;
       const a = card.querySelector("a[href]");
@@ -111,6 +111,7 @@
       const idMatch = url && url.match(/(?:product(?:o|s)?|id)[\/=-](\d+)/i);
       const img = card.querySelector("img");
       const wh = lines(card).find((l) => /bodega/i.test(l));
+      const sup = lines(card).find((l) => /^proveedor\s*:/i.test(l));
       const item = {
         key: idMatch ? `dropi:${idMatch[1]}` : `name:${name.toLowerCase().replace(/\s+/g, " ").trim()}`,
         name: name.slice(0, 200),
@@ -119,6 +120,7 @@
         url,
         image: img ? img.getAttribute("src") : null,
         warehouse: wh ? wh.replace(/bodega\s*:?\s*/i, "").trim() : null,
+        supplier: sup ? sup.replace(/^proveedor\s*:\s*/i, "").trim().slice(0, 160) : null,
       };
       Object.defineProperty(item, "el", { value: card, enumerable: false });
       out.push(item);

@@ -88,7 +88,9 @@ export function PageHeader({ title, sub, actions }: { title: string; sub?: React
   );
 }
 
-export function DemoNotice() {
+export async function DemoNotice() {
+  const { isDemo } = await import("@/lib/data.ts");
+  if (!(await isDemo())) return null;
   return (
     <p className="mb-4 rounded-md border border-border bg-surface px-3 py-2 text-xs text-text-muted" role="note">
       Estás viendo <b className="text-text">datos de ejemplo</b>: productos, proveedores y anunciantes ficticios. Instala la extensión y recorre Dropi para ver datos reales.

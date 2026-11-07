@@ -4,8 +4,28 @@ import { getCompetitors } from "@/lib/data.ts";
 import { DemoNotice, EmptyState, PageHeader } from "@/components/ui.tsx";
 import { Sparkline } from "@/components/charts.tsx";
 import { AddCompetitor } from "./add.tsx";
+import { revalidatePath } from "next/cache";
+import { asUser, hasDatabase } from "@/lib/server/db.ts";
+import { currentUser } from "@/lib/supabase/server.ts";
 
-export const revalidate = 3600;
+async function addCompetitor(fd: FormData) {
+  "use server";
+  const u = await currentUser();
+  if (!u) return;
+  const raw = String(fd.get("target") ?? "").trim().slice(0, 200);
+  if (!raw) return;
+  const tiktok = raw.startsWith("@") ? raw.slice(1) : null;
+  const domain = !tiktok && /\./.test(raw) && !/facebook\.com/i.test(raw) ? raw.replace(/^https?:\/\//, "").replace(/\/.*$/, "").toLowerCase() : null;
+  const fbMatch = raw.match(/facebook\.com\/(?:profile\.php\?id=(\d+)|([^/?#]+))/i);
+  const pageName = fbMatch?.[2] ?? null;
+  const pageId = fbMatch?.[1] ?? null;
+  const name = tiktok ?? domain ?? pageName ?? raw;
+  await asUser(u.id, (tx) => tx`insert into competitors (user_id, name, domain, tiktok_handle, facebook_page_id, facebook_page_name)
+    values (${u.id}, ${name}, ${domain}, ${tiktok}, ${pageId}, ${pageName ?? (domain || tiktok ? null : raw)})`);
+  revalidatePath("/competidores");
+}
+
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Competidores" };
 
 export default async function CompetitorsPage() {
@@ -14,7 +34,7 @@ export default async function CompetitorsPage() {
     <>
       <PageHeader title="Competidores" sub="Sigue sus anuncios: cuántos tienen activos, cuándo lanzan nuevos y qué productos empujan." />
       <DemoNotice />
-      <AddCompetitor />
+      <AddCompetitor action={hasDatabase() && (await currentUser()) ? addCompetitor : undefined} />
       {list.length === 0 ? (
         <EmptyState title="Aún no sigues a ningún competidor" body="Agrega la página de Facebook, el dominio o la cuenta de TikTok de una tienda que te interese." />
       ) : (

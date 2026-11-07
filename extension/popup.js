@@ -26,5 +26,19 @@
     a.click();
     URL.revokeObjectURL(url);
   });
+  $("cform").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const api = $("api").value.trim().replace(/\/+$/, "");
+    const tok = $("tok").value.trim();
+    let origin;
+    try { origin = new URL(api).origin; } catch { $("cmsg").textContent = "La dirección no es válida."; return; }
+    if (!/^cat_[A-Za-z0-9_-]{40,}$/.test(tok)) { $("cmsg").textContent = "El código no tiene el formato correcto."; return; }
+    // Permiso solo para el origen de tu Catalejo, pedido en este momento.
+    const granted = await chrome.permissions.request({ origins: [origin + "/*"] });
+    if (!granted) { $("cmsg").textContent = "Sin permiso no podemos enviar datos a tu cuenta."; return; }
+    await chrome.storage.local.set({ apiUrl: origin, token: tok });
+    $("cmsg").textContent = "Conectada. Los datos se envían cada 15 minutos.";
+    render();
+  });
   render();
 })();

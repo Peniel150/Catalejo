@@ -1,32 +1,54 @@
-// Capa de datos. Hoy usa los datos de ejemplo (lib/seed.ts).
-// replica-backend la reemplaza por Supabase manteniendo estas mismas firmas,
-// así ninguna pantalla cambia.
-
-import { buildSeed, SUPPLIERS, SUPPLIER_SCORES } from "./seed.ts";
+// Capa de datos. Con DATABASE_URL y sesión iniciada lee Postgres (con RLS, como el usuario);
+// si no, usa los datos de ejemplo (lib/seed.ts). Las pantallas no notan la diferencia.
+import "server-only";
+import { cache } from "react";
+import { buildSeed, SUPPLIERS as SEED_SUPPLIERS, SUPPLIER_SCORES as SEED_SCORES } from "./seed.ts";
 import { todaySantiago } from "./seed-helpers.ts";
 import { dayDiff, scoreProduct } from "./score.ts";
+import { asUser, hasDatabase } from "./server/db.ts";
+import { loadMarketFromDb } from "./server/market.ts";
+import { currentUser } from "./supabase/server.ts";
 import type { Ad, Competitor, RadarFilters, RadarRow, SavedAd, Supplier, SupplierScore } from "./types.ts";
 
-function db() {
+type Source = {
+  demo: boolean;
+  today: string;
+  products: import("./types.ts").MarketProduct[];
+  ads: Ad[];
+  competitors: Competitor[];
+  savedAds: SavedAd[];
+  suppliers: Supplier[];
+  supplierScores: SupplierScore[];
+};
+
+const load = cache(async (): Promise<Source> => {
+  const user = hasDatabase() ? await currentUser() : null;
+  if (user) {
+    const m = await asUser(user.id, (tx) => loadMarketFromDb(tx, user.id));
+    return { demo: false, ...m };
+  }
   const today = todaySantiago();
-  const seed = buildSeed(today);
-  return { today, ...seed };
+  return { demo: true, today, ...buildSeed(today), suppliers: SEED_SUPPLIERS, supplierScores: SEED_SCORES };
+});
+
+export async function isDemo() {
+  return (await load()).demo;
 }
 
 export async function getToday() {
-  return todaySantiago();
+  return (await load()).today;
 }
 
 export async function getCategories(): Promise<string[]> {
-  const { products } = db();
+  const { products } = await load();
   return [...new Set(products.map((p) => p.category))].sort();
 }
 
 export async function getRadar(f: RadarFilters = {}): Promise<{ rows: RadarRow[]; total: number; today: string }> {
-  const { products, ads, today } = db();
+  const { products, ads, today, suppliers, supplierScores } = await load();
   let rows: RadarRow[] = products.map((product) => {
-    const supplier = SUPPLIERS.find((s) => s.id === product.supplierId)!;
-    const sScore = SUPPLIER_SCORES.find((s) => s.supplierId === product.supplierId) ?? null;
+    const supplier = suppliers.find((s) => s.id === product.supplierId) ?? { id: product.supplierId, name: "Proveedor sin identificar", platform: "dropi" as const, country: "CL" as const };
+    const sScore = supplierScores.find((s) => s.supplierId === product.supplierId) ?? null;
     const score = scoreProduct({ product, ads: ads.filter((a) => a.productId === product.id), supplier: sScore, today });
     return { product, supplier, score };
   });
@@ -56,39 +78,38 @@ export async function getProduct(id: string) {
   const { rows, today } = await getRadar();
   const row = rows.find((r) => r.product.id === id);
   if (!row) return null;
-  const { ads } = db();
+  const { ads, supplierScores } = await load();
   const productAds = ads.filter((a) => a.productId === id).sort((a, b) => a.startedOn.localeCompare(b.startedOn));
-  const supplierScore = SUPPLIER_SCORES.find((s) => s.supplierId === row.product.supplierId) ?? null;
+  const supplierScore = supplierScores.find((s) => s.supplierId === row.product.supplierId) ?? null;
   const similar = rows.filter((r) => r.product.category === row.product.category && r.product.id !== id).slice(0, 4);
   return { ...row, ads: productAds, supplierScore, similar, today };
 }
 
 export async function getSuppliers(): Promise<{ supplier: Supplier; score: SupplierScore; products: number }[]> {
-  const { products } = db();
-  return SUPPLIERS.map((supplier) => ({
+  const { products, suppliers, supplierScores } = await load();
+  return suppliers.map((supplier) => ({
     supplier,
-    score: SUPPLIER_SCORES.find((s) => s.supplierId === supplier.id)!,
+    score: supplierScores.find((s) => s.supplierId === supplier.id) ?? { supplierId: supplier.id, ordersN: 0, contributorsN: 0, deliveryRate: null, returnRate: null, avgDispatchHours: null },
     products: products.filter((p) => p.supplierId === supplier.id).length,
   })).sort((a, b) => (b.score.ordersN >= 20 ? b.score.deliveryRate ?? 0 : -1) - (a.score.ordersN >= 20 ? a.score.deliveryRate ?? 0 : -1));
 }
 
 export async function getCompetitors(): Promise<(Competitor & { ads: Ad[] })[]> {
-  const { competitors, ads } = db();
+  const { competitors, ads } = await load();
   return competitors.map((c) => ({ ...c, ads: ads.filter((a) => a.pageId === c.facebookPageId) }));
 }
 
 export async function getCompetitor(id: string) {
-  const { today } = db();
+  const { today, products } = await load();
   const all = await getCompetitors();
   const c = all.find((x) => x.id === id);
   if (!c) return null;
-  const { products } = db();
   const productIds = [...new Set(c.ads.map((a) => a.productId).filter(Boolean))] as string[];
   return { ...c, products: products.filter((p) => productIds.includes(p.id)), today };
 }
 
 export async function getSavedAds(): Promise<(SavedAd & { ad: Ad; productName?: string; competitorName?: string })[]> {
-  const { savedAds, ads, products, competitors } = db();
+  const { savedAds, ads, products, competitors } = await load();
   return savedAds
     .map((s) => ({
       ...s,

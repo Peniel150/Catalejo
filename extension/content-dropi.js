@@ -24,7 +24,7 @@
       if (h.days[today] === undefined || c.stock < h.days[today]) h.days[today] = c.stock; // nos quedamos con el menor del día
       if (!seen.keys[c.key]) {
         seen.keys[c.key] = 1;
-        queue.push({ kind: "dropi_stock", key: c.key, name: c.name, stock: c.stock, prices: c.prices, warehouse: c.warehouse, url: c.url, day: today });
+        queue.push({ kind: "dropi_stock", key: c.key, name: c.name, stock: c.stock, prices: c.prices, warehouse: c.warehouse, supplier: c.supplier, url: c.url, image: c.image, day: today });
       }
     }
     // Historial local: solo 45 días por producto.

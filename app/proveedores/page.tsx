@@ -3,7 +3,7 @@ import { getSuppliers } from "@/lib/data.ts";
 import { fmtInt, fmtPct } from "@/lib/format.ts";
 import { DeliveryBadge, DemoNotice, PageHeader, ButtonLink } from "@/components/ui.tsx";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Proveedores" };
 
 export default async function SuppliersPage() {

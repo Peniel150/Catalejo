@@ -12,7 +12,7 @@ const dropiFixture = `
   <div class="card"><a href="/catalogo/producto/88123"><img src="a.jpg" alt=""></a>
     <h3 title="Corrector de postura ajustable">Corrector de postura ajus...</h3>
     <p>Precio proveedor $6.500</p><p>Precio sugerido $19.990</p>
-    <span>Stock: 1.284</span><span>Bodega: Santiago</span><button>Importar</button></div>
+    <span>Stock: 1.284</span><span>Bodega: Santiago</span><span>Proveedor: Proveedor de prueba</span><button>Importar</button></div>
   <div class="card"><a href="/catalogo/producto/88124"><img src="b.jpg" alt=""></a>
     <h3>Lámpara de luna 3D</h3><p>$5.200</p><span>Disponibles 37</span></div>
   <div class="banner">Envíos a todo Chile</div>
@@ -56,7 +56,7 @@ test("Dropi: lee nombre, stock, precios, id y bodega de las tarjetas visibles", 
   assert.equal(cards.length, 2);
   assert.deepEqual(cards[0], {
     key: "dropi:88123", name: "Corrector de postura ajustable", stock: 1284, prices: [6500, 19990],
-    url: "/catalogo/producto/88123", image: "a.jpg", warehouse: "Santiago",
+    url: "/catalogo/producto/88123", image: "a.jpg", warehouse: "Santiago", supplier: "Proveedor de prueba",
   });
   assert.equal(cards[1].name, "Lámpara de luna 3D");
   assert.equal(cards[1].stock, 37);

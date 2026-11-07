@@ -33,6 +33,17 @@
     <div class="stat"><span class="muted">Competidores seguidos</span><b id="comps">0</b></div>
   </div>
   <p class="muted" id="sync"></p>
+  <details id="connect">
+    <summary>Conectar cuenta</summary>
+    <form id="cform" style="display:grid;gap:8px;margin-top:8px">
+      <label for="api" class="muted">Dirección de tu Catalejo</label>
+      <input id="api" type="url" placeholder="https://tu-catalejo.vercel.app" required style="padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">
+      <label for="tok" class="muted">Código de la extensión (Ajustes → Extensión)</label>
+      <input id="tok" type="password" placeholder="cat_..." required style="padding:8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text)">
+      <button type="submit" class="primary">Conectar</button>
+      <p id="cmsg" class="muted" role="status"></p>
+    </form>
+  </details>
   <div class="row">
     <button id="pause" type="button">Pausar</button>
     <button id="export" type="button">Exportar datos</button>

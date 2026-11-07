@@ -29,3 +29,12 @@ La extensión solo lee lo que ya tienes en pantalla. No navega sola, no hace scr
 - `lib/cod.ts`: rentabilidad en contra entrega con devoluciones.
 - `lib/adlinks.ts`: links prellenados a las bibliotecas públicas de anuncios.
 - `extension/`: extensión MV3 (lectores probados en `parsers.test.mjs`).
+
+## Backend
+
+Ver `replica/backend.md` (en la carpeta de planificación) y `.env.example`. Sin variables, la app corre en modo demostración.
+
+```bash
+npm run test:db     # migraciones + pruebas de RLS con dos usuarios en Postgres local
+npm run db:migrate  # aplica las migraciones a DATABASE_URL (Supabase)
+```

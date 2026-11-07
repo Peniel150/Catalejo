@@ -3,7 +3,7 @@ import { getSavedAds, getToday } from "@/lib/data.ts";
 import { DemoNotice, EmptyState, PageHeader } from "@/components/ui.tsx";
 import { AdCard } from "@/components/ads.tsx";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Anuncios guardados" };
 
 export default async function SavedAdsPage() {

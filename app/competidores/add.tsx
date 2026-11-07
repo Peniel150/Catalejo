@@ -3,15 +3,16 @@ import { useState } from "react";
 import { metaAdLibraryDomain } from "@/lib/adlinks.ts";
 
 // Formulario para seguir un competidor. Con datos de ejemplo no guarda: muestra qué hará.
-export function AddCompetitor() {
+export function AddCompetitor({ action }: { action?: (fd: FormData) => Promise<void> }) {
   const [value, setValue] = useState("");
   const [done, setDone] = useState<string | null>(null);
   const clean = value.trim();
   return (
-    <form className="card mb-6 flex flex-wrap items-end gap-3 p-4" onSubmit={(e) => { e.preventDefault(); if (clean) setDone(clean); }}>
+    <form className="card mb-6 flex flex-wrap items-end gap-3 p-4" action={action ? async (fd) => { await action(fd); setDone(clean); setValue(""); } : undefined}
+      onSubmit={action ? undefined : (e) => { e.preventDefault(); if (clean) setDone(clean); }}>
       <div className="min-w-0 flex-1">
         <label htmlFor="comp" className="label">Página de Facebook, dominio o cuenta de TikTok</label>
-        <input id="comp" className="input mt-1" placeholder="ej.: mitienda.cl o @mitienda" value={value} onChange={(e) => { setValue(e.target.value); setDone(null); }} />
+        <input id="comp" name="target" maxLength={200} className="input mt-1" placeholder="ej.: mitienda.cl o @mitienda" value={value} onChange={(e) => { setValue(e.target.value); setDone(null); }} />
       </div>
       <button type="submit" disabled={!clean} className="h-10 rounded-md bg-accent px-4 font-semibold text-on-accent disabled:opacity-50">Seguir competidor</button>
       {done && (
