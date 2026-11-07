@@ -1,12 +1,12 @@
 /* tokens.css: generado desde tokens.json / tokens.dark.json. No editar a mano. */
 :root {
   --c-bg: #ffffff;
-  --c-surface: #f6f7f9;
-  --c-surface-2: #eef0f3;
-  --c-border: #e3e6ea;
-  --c-border-input: #7c8591;
-  --c-text: #14171c;
-  --c-text-muted: #5b6470;
+  --c-surface: #f7f7f7;
+  --c-surface-2: #efefef;
+  --c-border: #e5e5e5;
+  --c-border-input: #7a7a7a;
+  --c-text: #0a0a0a;
+  --c-text-muted: #5c5c5c;
   --c-accent: #0b6e64;
   --c-on-accent: #ffffff;
   --c-focus: #0b6e64;
@@ -45,13 +45,13 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-  --c-bg: #0e1116;
-  --c-surface: #161a21;
-  --c-surface-2: #1d222b;
-  --c-border: #2a303b;
-  --c-border-input: #6b7482;
-  --c-text: #e8ebf0;
-  --c-text-muted: #9aa3b0;
+  --c-bg: #000000;
+  --c-surface: #0d0d0d;
+  --c-surface-2: #181818;
+  --c-border: #262626;
+  --c-border-input: #6b6b6b;
+  --c-text: #f2f2f2;
+  --c-text-muted: #a3a3a3;
   --c-accent: #4fd1bf;
   --c-on-accent: #0e1116;
   --c-focus: #4fd1bf;
@@ -59,11 +59,11 @@
   --c-success: #4fc98a;
   --c-warning: #f0b44c;
   --c-score-high: #7be0a8;
-  --c-score-high-bg: #123524;
+  --c-score-high-bg: #0f2a1d;
   --c-score-mid: #f5c66b;
-  --c-score-mid-bg: #3a2b0c;
+  --c-score-mid-bg: #2e2309;
   --c-score-low: #ff9a92;
-  --c-score-low-bg: #3d1717;
+  --c-score-low-bg: #331414;
   --c-src-meta: #8fb0ff;
   --c-src-tiktok: #e8ebf0;
   --c-src-ml: #f0d75a;
@@ -74,13 +74,13 @@
   }
 }
 :root[data-theme="dark"] {
-  --c-bg: #0e1116;
-  --c-surface: #161a21;
-  --c-surface-2: #1d222b;
-  --c-border: #2a303b;
-  --c-border-input: #6b7482;
-  --c-text: #e8ebf0;
-  --c-text-muted: #9aa3b0;
+  --c-bg: #000000;
+  --c-surface: #0d0d0d;
+  --c-surface-2: #181818;
+  --c-border: #262626;
+  --c-border-input: #6b6b6b;
+  --c-text: #f2f2f2;
+  --c-text-muted: #a3a3a3;
   --c-accent: #4fd1bf;
   --c-on-accent: #0e1116;
   --c-focus: #4fd1bf;
@@ -88,11 +88,11 @@
   --c-success: #4fc98a;
   --c-warning: #f0b44c;
   --c-score-high: #7be0a8;
-  --c-score-high-bg: #123524;
+  --c-score-high-bg: #0f2a1d;
   --c-score-mid: #f5c66b;
-  --c-score-mid-bg: #3a2b0c;
+  --c-score-mid-bg: #2e2309;
   --c-score-low: #ff9a92;
-  --c-score-low-bg: #3d1717;
+  --c-score-low-bg: #331414;
   --c-src-meta: #8fb0ff;
   --c-src-tiktok: #e8ebf0;
   --c-src-ml: #f0d75a;
