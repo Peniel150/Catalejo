@@ -80,7 +80,39 @@ export function CodCalculator() {
           Si entregaras el 100%, podrías pagar hasta <b className="num text-text">{fmtCLP(at100.breakevenCpa)}</b> por pedido. Con {fmtPct(input.deliveryRate)} de entrega, el máximo baja a <b className="num text-text">{fmtCLP(r.breakevenCpa)}</b>.
         </div>
         {r.warnings.map((w) => <p key={w} className="rounded-md bg-score-low-bg px-3 py-2 text-xs text-score-low">{w}</p>)}
+        <RoiCampaign expectedProfit={r.expectedProfitPerOrder} salePrice={input.salePrice} />
       </section>
     </div>
+  );
+}
+
+/** ROI de una campaña ya corrida: cuánto ganaste de verdad con lo que gastaste en anuncios. */
+function RoiCampaign({ expectedProfit, salePrice }: { expectedProfit: number; salePrice: number }) {
+  const [spend, setSpend] = useState("150000");
+  const [orders, setOrders] = useState("30");
+  const s = Math.max(0, Number(spend) || 0);
+  const o = Math.max(0, Number(orders) || 0);
+  const net = o * expectedProfit - s;
+  const roi = s > 0 ? net / s : null;
+  const roas = s > 0 ? (o * salePrice) / s : null;
+  const cpa = o > 0 ? s / o : null;
+  const field = "input num mt-1";
+  return (
+    <section className="card grid gap-3 p-4" aria-labelledby="h-roi">
+      <h2 id="h-roi" className="text-lg font-semibold">ROI de una campaña</h2>
+      <div className="grid grid-cols-2 gap-3">
+        <div><label htmlFor="r-spend" className="label">Gasto en anuncios</label>
+          <input id="r-spend" inputMode="numeric" className={field} value={spend} onChange={(e) => setSpend(e.target.value.replace(/[^\d]/g, ""))} /></div>
+        <div><label htmlFor="r-orders" className="label">Pedidos confirmados</label>
+          <input id="r-orders" inputMode="numeric" className={field} value={orders} onChange={(e) => setOrders(e.target.value.replace(/[^\d]/g, ""))} /></div>
+      </div>
+      <dl className="grid grid-cols-2 gap-3">
+        <div><dt className="label">Ganancia neta (con devoluciones)</dt><dd className={`num text-lg font-semibold ${net < 0 ? "text-danger" : "text-success"}`}>{fmtCLP(net)}</dd></div>
+        <div><dt className="label">ROI</dt><dd className="num text-lg font-semibold">{roi === null ? "—" : `${Math.round(roi * 100)}%`}</dd></div>
+        <div><dt className="label">CPA real</dt><dd className="num text-lg font-semibold">{cpa === null ? "—" : fmtCLP(cpa)}</dd></div>
+        <div><dt className="label">ROAS (ventas brutas / gasto)</dt><dd className="num text-lg font-semibold">{roas === null ? "—" : roas.toFixed(2)}</dd></div>
+      </dl>
+      <p className="text-xs text-text-muted">Usa la ganancia esperada por pedido de arriba, que ya descuenta los pedidos que no se entregan.</p>
+    </section>
   );
 }

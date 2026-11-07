@@ -1,17 +1,23 @@
 import type { Metadata } from "next";
-import { EmptyState, PageHeader, ButtonLink } from "@/components/ui.tsx";
+import { PageHeader } from "@/components/ui.tsx";
+import { getRadar, getTrackedIds, isDemo } from "@/lib/data.ts";
+import { toggleFollow } from "../radar/actions.ts";
+import { FollowList, type FollowRow } from "./list.tsx";
 
 export const metadata: Metadata = { title: "Seguimiento" };
+export const dynamic = "force-dynamic";
 
-export default function Page() {
+export default async function Page() {
+  const [{ rows }, tracked, demo] = await Promise.all([getRadar(), getTrackedIds(), isDemo()]);
+  const all: FollowRow[] = rows.map(({ product: p, score: s }) => ({
+    id: p.id, name: p.name, category: p.category, score: s.score, units7: s.estUnits7d, growth: s.growth7d,
+    stock: s.currentStock, restocked: s.restocked, delivery: s.supplierDeliveryRate, spark: s.daily.slice(-14).map((d) => d.units),
+    stockLow: s.currentStock !== null && s.estUnits7d > 0 && s.currentStock < s.estUnits7d,
+  }));
   return (
     <>
-      <PageHeader title="Seguimiento" sub="Productos que sigues, con alertas de stock, reposición, precio y entrega." />
-      <EmptyState
-        title="Aún no sigues productos"
-        body="Toca “Seguir” en un producto del radar. Te avisaremos si baja el stock, repone o cambia su tasa de entrega."
-        action={<ButtonLink href="/radar" variant="primary">Ir al radar</ButtonLink>}
-      />
+      <PageHeader title="Seguimiento" sub="Productos que sigues, con avisos de stock bajo, reposición y cambios de tendencia." />
+      <FollowList rows={demo ? all : all.filter((r) => tracked.includes(r.id))} demo={demo} action={demo ? undefined : toggleFollow} />
     </>
   );
 }

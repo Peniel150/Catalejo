@@ -8,6 +8,7 @@ import { dayDiff, scoreProduct } from "./score.ts";
 import { asUser, hasDatabase } from "./server/db.ts";
 import { loadMarketFromDb } from "./server/market.ts";
 import { currentUser } from "./supabase/server.ts";
+import { rankSimilar } from "./similar.ts";
 import type { Ad, Competitor, RadarFilters, RadarRow, SavedAd, Supplier, SupplierScore } from "./types.ts";
 
 type Source = {
@@ -81,7 +82,10 @@ export async function getProduct(id: string) {
   const { ads, supplierScores } = await load();
   const productAds = ads.filter((a) => a.productId === id).sort((a, b) => a.startedOn.localeCompare(b.startedOn));
   const supplierScore = supplierScores.find((s) => s.supplierId === row.product.supplierId) ?? null;
-  const similar = rows.filter((r) => r.product.category === row.product.category && r.product.id !== id).slice(0, 4);
+  const similar = rankSimilar(
+    { id, name: row.product.name, category: row.product.category },
+    rows.map((r) => ({ id: r.product.id, name: r.product.name, category: r.product.category })),
+  ).map(({ item, score }) => ({ ...rows.find((r) => r.product.id === item.id)!, nameMatch: score }));
   return { ...row, ads: productAds, supplierScore, similar, today };
 }
 
@@ -118,4 +122,12 @@ export async function getSavedAds(): Promise<(SavedAd & { ad: Ad; productName?: 
       competitorName: competitors.find((c) => c.id === s.competitorId)?.name,
     }))
     .filter((s) => s.ad);
+}
+
+/** Ids de productos seguidos (modo real). En demostración se guardan en el navegador. */
+export async function getTrackedIds(): Promise<string[]> {
+  const user = hasDatabase() ? await currentUser() : null;
+  if (!user) return [];
+  const rows = await asUser(user.id, (tx) => tx`select market_product_id from tracked_market_products`);
+  return rows.map((r) => r.market_product_id as string);
 }

@@ -9,6 +9,9 @@ import { fmtCLP, fmtGrowth, fmtInt, fmtPct } from "@/lib/format.ts";
 import { DeliveryBadge, DemoNotice, EmptyState, ScoreBadge, Stat, ButtonLink, SaturationText } from "@/components/ui.tsx";
 import { BarLineChart } from "@/components/charts.tsx";
 import { AdCard } from "@/components/ads.tsx";
+import { FollowButton } from "@/components/follow.tsx";
+import { getTrackedIds, isDemo } from "@/lib/data.ts";
+import { toggleFollow } from "../actions.ts";
 
 type P = Promise<{ id: string }>;
 
@@ -24,6 +27,7 @@ export default async function ProductPage({ params, searchParams }: { params: P;
   const d = await getProduct(id);
   if (!d) notFound();
   const { product: p, supplier, score: s, ads, supplierScore: ss, similar, today } = d;
+  const [tracked, demo] = await Promise.all([getTrackedIds(), isDemo()]);
   const cod = codCalc({ salePrice: p.suggestedPrice, productCost: p.supplierCost, freight: 3990, returnFreight: 3990, otherCostPerOrder: 500, deliveryRate: s.supplierDeliveryRate ?? 0.7 });
   const tabs = [
     { key: "resumen", label: "Resumen" },
@@ -41,7 +45,10 @@ export default async function ProductPage({ params, searchParams }: { params: P;
           <p className="mt-1 text-text-muted">{p.category} · {supplier.name} · en catálogo desde {p.listedOn}</p>
           <p className="mt-1 text-xs text-text-muted">{s.daysObserved} días observados{s.restocked && " · repuso stock en las últimas 2 semanas"}</p>
         </div>
-        <div className="flex items-center gap-3"><ScoreBadge score={s.score} size="lg" /><span className="text-xs text-text-muted">de 100</span></div>
+        <div className="flex items-center gap-3">
+          <FollowButton productId={p.id} name={p.name} initial={tracked.includes(p.id)} action={demo ? undefined : toggleFollow} size="md" />
+          <ScoreBadge score={s.score} size="lg" /><span className="text-xs text-text-muted">de 100</span>
+        </div>
       </div>
       <DemoNotice />
 
@@ -93,11 +100,15 @@ export default async function ProductPage({ params, searchParams }: { params: P;
           </div>
           {similar.length > 0 && (
             <section aria-labelledby="h-sim">
-              <h2 id="h-sim" className="mb-3 text-lg font-semibold">Otros productos de {p.category}</h2>
+              <h2 id="h-sim" className="mb-1 text-lg font-semibold">Productos parecidos</h2>
+              <p className="mb-3 text-xs text-text-muted">Mismo producto con otro nombre u otro proveedor, y otros de {p.category}. Compara su entrega antes de elegir proveedor.</p>
               <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {similar.map((r) => (
                   <li key={r.product.id} className="card flex items-center justify-between gap-2 p-3">
-                    <Link href={`/radar/${r.product.id}`} className="line-clamp-2 font-medium hover:text-accent">{r.product.name}</Link>
+                    <div className="min-w-0">
+                      <Link href={`/radar/${r.product.id}`} className="line-clamp-2 font-medium hover:text-accent">{r.product.name}</Link>
+                      <p className="text-xs text-text-muted">{r.nameMatch >= 0.25 ? "mismo producto, probable · " : ""}entrega <DeliveryBadge rate={r.score.supplierDeliveryRate} /></p>
+                    </div>
                     <ScoreBadge score={r.score.score} />
                   </li>
                 ))}

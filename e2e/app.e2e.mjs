@@ -29,6 +29,7 @@ test("A11Y y estabilidad: cada pantalla sin errores, sin 5xx, accesible, en clar
 test("F01-H1 radar: muestra productos ordenados por puntaje", async () => {
   const page = await openPage(browser);
   await page.goto(BASE + "/radar");
+  await page.locator("table tbody tr").first().waitFor();
   const scores = await page.locator("table tbody tr td:nth-child(2) span").allTextContents();
   assert.ok(scores.length >= 10);
   const n = scores.map(Number);
@@ -90,6 +91,7 @@ test("F01-E3 radar: parámetros inválidos se ignoran sin error", async () => {
 test("F01-H4 radar: en móvil se ven tarjetas, no la tabla", async () => {
   const page = await openPage(browser, { width: 390 });
   await page.goto(BASE + "/radar");
+  await page.locator("main ul li.card").first().waitFor();
   assert.equal(await page.locator("table").isVisible(), false);
   assert.ok((await page.locator("main ul li.card").count()) > 0);
   await assertNoHorizontalScroll(page);
@@ -225,5 +227,38 @@ test("Menú móvil: abre, navega y se cierra con Escape", async () => {
   await page.getByRole("button", { name: "Abrir menú" }).click();
   await dialog.getByRole("link", { name: "Proveedores" }).click();
   await page.waitForURL(/proveedores/);
+  assertClean(page);
+});
+
+test("F05-H1 seguimiento: seguir desde el radar aparece en Seguimiento y se puede dejar de seguir", async () => {
+  const page = await openPage(browser);
+  await page.goto(BASE + "/radar", { waitUntil: "networkidle" });
+  const first = page.locator("table tbody tr").first();
+  const name = (await first.locator("td:first-child a").textContent()).trim();
+  await first.getByRole("button", { name: `Seguir ${name}` }).click();
+  assert.equal(await first.getByRole("button", { name: `Dejar de seguir ${name}` }).getAttribute("aria-pressed"), "true");
+  await page.goto(BASE + "/seguimiento", { waitUntil: "networkidle" });
+  await page.getByRole("link", { name }).waitFor();
+  await page.getByRole("button", { name: `Dejar de seguir ${name}` }).click();
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByText("Aún no sigues productos").waitFor();
+  assertClean(page);
+});
+
+test("F02-H3 detalle: muestra productos parecidos con su entrega", async () => {
+  const page = await openPage(browser);
+  await page.goto(BASE + "/radar/p-1");
+  await page.getByRole("heading", { name: "Productos parecidos" }).waitFor();
+  assert.ok((await page.locator("#h-sim ~ ul li").count()) > 0);
+  assertClean(page);
+});
+
+test("F03-H3 calculadora: ROI de campaña negativo se marca en rojo", async () => {
+  const page = await openPage(browser);
+  await page.goto(BASE + "/herramientas", { waitUntil: "networkidle" });
+  await page.getByLabel("Gasto en anuncios").fill("900000");
+  await page.getByLabel("Pedidos confirmados").fill("10");
+  const net = page.locator("dt", { hasText: "Ganancia neta (con devoluciones)" }).locator("xpath=following-sibling::dd");
+  assert.match(await net.getAttribute("class"), /text-danger/);
   assertClean(page);
 });

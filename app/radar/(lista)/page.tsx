@@ -7,6 +7,9 @@ import { fmtCLP, fmtInt, fmtPct } from "@/lib/format.ts";
 import { DeliveryBadge, DemoNotice, EmptyState, Growth, PageHeader, SaturationText, ScoreBadge, Stat, ButtonLink } from "@/components/ui.tsx";
 import { Sparkline } from "@/components/charts.tsx";
 import { RadarFilters } from "@/components/filters.tsx";
+import { FollowButton } from "@/components/follow.tsx";
+import { getTrackedIds, isDemo } from "@/lib/data.ts";
+import { toggleFollow } from "../actions.ts";
 
 export const metadata: Metadata = { title: "Radar" };
 
@@ -14,7 +17,8 @@ type SP = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function RadarPage({ searchParams }: { searchParams: SP }) {
   const filters = parseRadarFilters(await searchParams);
-  const [{ rows, total }, categories] = await Promise.all([getRadar(filters), getCategories()]);
+  const [{ rows, total }, categories, tracked, demo] = await Promise.all([getRadar(filters), getCategories(), getTrackedIds(), isDemo()]);
+  const followAction = demo ? undefined : toggleFollow;
   const all = (await getRadar()).rows;
   const strong = all.filter((r) => r.score.score >= 70).length;
   const rates = all.map((r) => r.score.supplierDeliveryRate).filter((x): x is number => x !== null);
@@ -40,11 +44,11 @@ export default async function RadarPage({ searchParams }: { searchParams: SP }) 
           <p className="mb-2 text-xs text-text-muted" aria-live="polite">{rows.length} de {total} productos</p>
           {/* Escritorio: tabla */}
           <div className="card hidden overflow-x-auto md:block" tabIndex={0} role="region" aria-label="Tabla de productos (desplázate a los lados)">
-            <table className="w-full min-w-[1180px] border-collapse">
+            <table className="w-full min-w-[1280px] border-collapse">
               <caption className="sr-only">Productos ordenados</caption>
               <thead>
                 <tr className="bg-surface text-left text-xs text-text-muted">
-                  {["Producto", "Puntaje", "Ventas est. 7d", "Efectivas 7d", "Tendencia", "Proveedor · entrega", "Stock", "Anunciantes CL", "Anuncio más antiguo", "Costo / precio sug."].map((h) => (
+                  {["Producto", "Puntaje", "Ventas est. 7d", "Efectivas 7d", "Tendencia", "Proveedor · entrega", "Stock", "Anunciantes CL", "Anuncio más antiguo", "Costo / precio sug.", "Seguir"].map((h) => (
                     <th key={h} scope="col" className="whitespace-nowrap border-b border-border px-3 py-2 font-semibold">{h}</th>
                   ))}
                 </tr>
@@ -70,6 +74,7 @@ export default async function RadarPage({ searchParams }: { searchParams: SP }) 
                     <td className="px-3 py-2"><span className="num mr-2">{s.advertisers}</span><SaturationText value={s.saturation} /></td>
                     <td className="num px-3 py-2">{s.oldestAdDays === null ? "—" : `${s.oldestAdDays} d`}</td>
                     <td className="num whitespace-nowrap px-3 py-2 text-xs">{fmtCLP(p.supplierCost)} / {fmtCLP(p.suggestedPrice)}</td>
+                    <td className="px-3 py-2"><FollowButton productId={p.id} name={p.name} initial={tracked.includes(p.id)} action={followAction} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -87,6 +92,7 @@ export default async function RadarPage({ searchParams }: { searchParams: SP }) 
                   </div>
                   <ScoreBadge score={s.score} />
                 </div>
+                <div className="mt-2"><FollowButton productId={p.id} name={p.name} initial={tracked.includes(p.id)} action={followAction} /></div>
                 <dl className="mt-3 grid grid-cols-3 gap-2 text-xs">
                   <div><dt className="text-text-muted">Efectivas 7d</dt><dd className="num font-semibold">{s.effectiveUnits7d ?? "—"}</dd></div>
                   <div><dt className="text-text-muted">Entrega</dt><dd><DeliveryBadge rate={s.supplierDeliveryRate} /></dd></div>
