@@ -96,6 +96,22 @@
   const STOCK_LABEL_RE = /^(?:stock|disponibles?|inventario)\s*:?\s*([\d.,]+)/i;
   const STOCK_COUNT_RE = /(?:stock|disponibles?|inventario)/gi;
 
+  const countStock = (t) => (t.match(STOCK_COUNT_RE) || []).length;
+
+  /** La tarjeta: el ancestro más grande que todavía tiene una sola etiqueta "Stock" (el siguiente ya abarca la grilla). */
+  function cardOf(el, tooBig) {
+    let card = null;
+    let cur = el;
+    for (let i = 0; cur && i < 14; i++) {
+      if (tooBig && tooBig.has(cur)) break; // ya se sabe que abarca varias tarjetas: no se recalcula
+      const t = text(cur);
+      if (countStock(t) > 1 || t.length > 3000) { if (tooBig) tooBig.add(cur); break; }
+      card = cur;
+      cur = cur.parentElement;
+    }
+    return card;
+  }
+
   function ownText(el) {
     return text(el).replace(/\s+/g, " ").trim();
   }
@@ -137,21 +153,51 @@
           }
         }
       }
+      // d) el número aparece en uno de los 3 textos siguientes, en otro bloque ("Stock" | <div><b>80</b></div>)
+      if (!m && /^\s*(?:stock|disponibles?|inventario)\s*:?\s*$/i.test(raw)) {
+        const tw2 = doc.createTreeWalker(rootEl, 4);
+        tw2.currentNode = tn;
+        for (let k = 0, n2; k < 3 && (n2 = tw2.nextNode()); ) {
+          const v = (n2.nodeValue || "").replace(/\s+/g, " ").trim();
+          if (!v) continue;
+          k++;
+          const mm = v.match(/^([\d.,]+)(?:\s*(?:u|uds?|unidades))?$/i);
+          if (mm) {
+            m = mm;
+            // el contenedor común más chico de la etiqueta y el número
+            let h = el;
+            while (h && !h.contains(n2)) h = h.parentElement;
+            holder = h || el;
+            break;
+          }
+        }
+      }
       if (!m || used.has(holder)) continue;
       used.add(holder);
       stockEls.push({ el: holder, value: m[1] });
     }
+    const tooBig = new WeakSet();
     // Ya vienen en el orden en que aparecen en la página.
     for (const { el, value } of stockEls) {
       // 2) La tarjeta: el ancestro más chico con un precio y una imagen o un link.
       // 2) La tarjeta: el ancestro más chico con un precio que no abarque otra tarjeta (un solo "Stock").
-      const card = closestMatching(el, (x) => { const t = text(x); return /\$\s*\d/.test(t) && (t.match(STOCK_COUNT_RE) || []).length <= 1; }, 12);
+      const card = cardOf(el, tooBig);
       if (!card || seen.has(card)) continue;
       seen.add(card);
       const stock = parseIntCL(value);
       if (stock === null) continue;
-      const prices = [...text(card).matchAll(PRICE_RE)].map((x) => parseIntCL(x[1])).filter((n) => n && n > 0);
       const ls = lines(card);
+      let prices = [...text(card).matchAll(PRICE_RE)].map((x) => parseIntCL(x[1])).filter((n) => n && n > 0);
+      if (!prices.length) {
+        // Sin "$" pegado al número: se toma el primer número después de cada "Precio ...".
+        for (let i = 0; i < ls.length; i++) {
+          if (!/precio/i.test(ls[i])) continue;
+          const own = ls[i].match(/(\d{1,3}(?:\.\d{3})+|\d{3,})/);
+          const nxt = own ? null : ls.slice(i + 1, i + 4).find((l) => /^\$?\s*[\d.]+$/.test(l));
+          const v = parseIntCL(own ? own[1] : nxt);
+          if (v) prices.push(v);
+        }
+      }
       // Proveedor: "Provider: WOWI" o "Proveedor: X", junto o separado ("Provider:" | "WOWI").
       let supplier = null;
       for (let i = 0; i < ls.length; i++) {
@@ -200,15 +246,25 @@
   function diagnoseDropi(rootEl) {
     const doc = rootEl.ownerDocument || rootEl;
     const info = { url: (doc.location && doc.location.pathname) || "", stockLabels: 0, iframes: doc.querySelectorAll("iframe").length, shadowHosts: 0, prices: 0, sample: "" };
-    let first = null;
     for (const tn of walkTextNodes(rootEl)) {
       const v = tn.nodeValue || "";
-      if (/(?:stock|disponibles?|inventario)/i.test(v)) { info.stockLabels++; if (!first) first = tn.parentElement; }
+      if (/(?:stock|disponibles?|inventario)/i.test(v)) info.stockLabels++;
       if (/\$\s*\d/.test(v)) info.prices++;
     }
     for (const e of rootEl.querySelectorAll("*")) if (e.shadowRoot) info.shadowHosts++;
-    let box = first;
-    for (let i = 0; box && i < 6; i++) { if (box.parentElement && text(box.parentElement).length > 1200) break; box = box.parentElement; }
+    const labels = [];
+    for (const tn of walkTextNodes(rootEl)) if (/(?:stock|disponibles?|inventario)/i.test(tn.nodeValue || "")) { labels.push(tn); if (labels.length >= 3) break; }
+    const target = labels[1] || labels[0];
+    // Secuencia de textos después de la 2.ª etiqueta (la 1.ª suele ser el filtro), tal cual, para ver cómo separa Dropi cada dato.
+    info.textsAfter = [];
+    if (target) {
+      const tw = doc.createTreeWalker(rootEl, 4);
+      tw.currentNode = target;
+      info.textsAfter.push(target.nodeValue);
+      let n;
+      while ((n = tw.nextNode()) && info.textsAfter.length < 30) { const v = n.nodeValue; if (v && v.trim()) info.textsAfter.push(v.replace(/[^\x20-\x7e\u00c0-\u017f]/g, (c) => `[u${c.charCodeAt(0).toString(16)}]`)); }
+    }
+    const box = target ? cardOf(target.parentElement) || target.parentElement : null;
     const skel = (n, depth) => {
       if (depth > 14) return "";
       if (n.nodeType === 3) { const t = n.nodeValue.replace(/\s+/g, " ").trim(); return t ? t.slice(0, 60) : ""; }
