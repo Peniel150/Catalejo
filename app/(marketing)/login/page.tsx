@@ -21,7 +21,7 @@ async function sendLink(formData: FormData) {
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? `https://${h.get("host")}`;
   const sb = supabaseMailer();
   const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: `${origin}/auth/entrar`, shouldCreateUser: true } });
-  if (error) redirect(error.status === 429 ? "/login?e=limite" : "/login?e=envio");
+  if (error) redirect(error.status === 429 ? "/login?e=correo" : "/login?e=envio");
   (await cookies()).set(EMAIL_COOKIE, email, { httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 30, path: "/login" });
   redirect("/login?ok=1");
 }
@@ -46,6 +46,7 @@ async function verifyCode(formData: FormData) {
 const msgs: Record<string, string> = {
   email: "Revisa el correo: no parece válido.",
   limite: "Pediste varios intentos seguidos. Espera unos minutos.",
+  correo: "El servicio de correo alcanzó su límite de envíos por hora. Intenta más tarde.",
   envio: "No pudimos enviar el correo. Intenta de nuevo en un minuto.",
   enlace: "Ese enlace ya no sirve (vence en una hora y se puede usar una sola vez). Pide uno nuevo.",
   codigo: "El código no es correcto o ya venció. Revisa el último correo que te llegó.",
