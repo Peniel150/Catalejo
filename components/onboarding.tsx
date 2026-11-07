@@ -19,7 +19,7 @@ export function RadarOnboarding() {
           {steps.map((s, i) => (
             <li key={s.title} className="grid content-start gap-2 rounded-lg border border-border p-4">
               <div className="flex items-center gap-2">
-                <span className="num grid h-7 w-7 place-items-center rounded-full bg-accent text-xs font-semibold text-on-accent" aria-hidden="true">{i + 1}</span>
+                <span className="num grid h-8 w-8 place-items-center rounded-full bg-accent text-xs font-semibold text-on-accent" aria-hidden="true">{i + 1}</span>
                 <s.icon size={18} className="text-text-muted" aria-hidden="true" />
               </div>
               <h3 className="font-semibold">{s.title}</h3>

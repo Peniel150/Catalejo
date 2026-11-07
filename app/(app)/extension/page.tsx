@@ -29,7 +29,7 @@ export default function ExtensionPage() {
         <ol className="grid gap-3">
           {steps.map(([t, b], i) => (
             <li key={t} className="flex gap-3 rounded-lg border border-border p-4">
-              <span className="num grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-2 text-xs font-semibold" aria-hidden="true">{i + 1}</span>
+              <span className="num grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-2 text-xs font-semibold" aria-hidden="true">{i + 1}</span>
               <div><p className="font-semibold">{t}</p><p className="text-text-muted">{b}</p></div>
             </li>
           ))}
