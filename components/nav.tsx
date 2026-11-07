@@ -37,10 +37,9 @@ function NavList({ onNavigate }: { onNavigate?: () => void }) {
 export function Logo() {
   return (
     <Link href="/radar" className="flex items-center gap-2 px-3 text-lg font-bold">
-      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-        <circle cx="12" cy="12" r="10" fill="none" stroke="var(--c-brand-brass)" strokeWidth="2.5" />
-        <circle cx="12" cy="12" r="5.5" fill="none" stroke="var(--c-brand-brass)" strokeWidth="2" />
-        <circle cx="12" cy="12" r="2" fill="var(--c-accent)" />
+      <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M24.5 9.5 A11 11 0 1 0 24.5 22.5" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+        <circle cx="16" cy="16" r="3.6" fill="var(--c-accent)" />
       </svg>
       catalejo
     </Link>

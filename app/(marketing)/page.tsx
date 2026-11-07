@@ -36,7 +36,7 @@ export default async function Landing() {
     <>
       <section className="grid gap-8 py-12 lg:grid-cols-[1fr_1.2fr] lg:items-center lg:py-20" aria-labelledby="hero">
         <div className="grid gap-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand-brass">Para dropshippers de Dropi Chile</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-accent">Para dropshippers de Dropi Chile</p>
           <h1 id="hero" className="text-display font-bold">Qué se vende en Dropi y qué proveedor de verdad entrega.</h1>
           <p className="text-base text-text-muted">Catalejo estima las ventas de cada producto, mide la entrega efectiva de cada proveedor y te muestra los anuncios de tu competencia. Para que elijas por ganancia, no por volumen.</p>
           <div className="flex flex-wrap gap-3">
