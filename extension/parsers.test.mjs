@@ -77,6 +77,42 @@ test("Meta Ad Library: id, fecha de inicio, estado, página, dominio y formato",
   assert.equal(ads[1].mediaType, "carousel");
 });
 
+// Estructura como la del catálogo de Dropi Chile (escrita a mano a partir de una captura):
+// la etiqueta "Stock" y el número van en elementos separados, igual que "Provider:" y el nombre.
+const dropiCL = `
+<div class="grid">
+  <div class="product-card"><div class="img"><img src="r.jpg" alt=""><span>Verificado</span><button>♡</button></div>
+    <div class="body"><div class="row"><span>Salud</span><span>Stock <b>958</b></span></div>
+      <p class="title">2 Rodillera 2 Codera</p>
+      <p><span>Provider:</span> <a>WOWI</a></p>
+      <div class="prices"><div><small>Precio proveedor:</small><span>$ 5.900</span></div><div><small>Precio sugerido</small><b>$ 14.990</b></div></div>
+      <button>Enviar a cliente</button></div></div>
+  <div class="product-card"><div class="img"><img src="c.jpg" alt=""></div>
+    <div class="body"><div class="row"><span>Hogar</span><span>Stock</span><span>400</span></div>
+      <p class="title">Caja Plastica Divisiones Movibles</p>
+      <p><span>Provider:</span><a>PRO OUTDOOR GLOBAL</a></p>
+      <div class="prices"><small>Precio proveedor:</small><span>$ 1.990</span><small>Precio sugerido</small><b>$ 2.990</b></div>
+      <button>Enviar a cliente</button></div></div>
+  <div class="product-card"><div class="img"><img src="g.jpg" alt=""><span>Verificado</span></div>
+    <div class="body"><div class="row"><span>Hogar</span><span>Stock <b>2.673</b></span></div>
+      <p class="title">1000g Agente Impermeabilizante Dropi Cup</p>
+      <p><a>IMPORTADORA PING +56912345678</a></p><p><span>Provider:</span> <a>968754918</a></p>
+      <div class="prices"><small>Precio proveedor:</small><span>$ 3.000</span><small>Precio sugerido</small><b>$ 1</b></div>
+      <button>Enviar a cliente</button></div></div>
+</div>`;
+
+test("Dropi Chile real: Stock y número separados, Provider separado", () => {
+  const { document } = parseHTML(`<html><body>${dropiCL}</body></html>`);
+  const cards = P.parseDropiCards(document.body);
+  assert.equal(cards.length, 3);
+  assert.deepEqual(cards.map((c) => [c.name, c.stock, c.supplier]), [
+    ["2 Rodillera 2 Codera", 958, "WOWI"],
+    ["Caja Plastica Divisiones Movibles", 400, "PRO OUTDOOR GLOBAL"],
+    ["1000g Agente Impermeabilizante Dropi Cup", 2673, "968754918"],
+  ]);
+  assert.deepEqual(cards[0].prices, [5900, 14990]);
+});
+
 test("estimación desde historial local: bajas = ventas, subidas = reposición", () => {
   const r = P.estimateFromHistory({ "2026-11-01": 100, "2026-11-03": 80, "2026-11-04": 200, "2026-11-06": 190 }, "2026-11-06");
   assert.equal(r.units7, 30);

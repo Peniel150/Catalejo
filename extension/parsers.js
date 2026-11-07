@@ -89,29 +89,75 @@
    * Devuelve [{ key, name, stock, prices[], url, image, warehouse }].
    * key = id del producto en la URL si existe, si no, el nombre normalizado.
    */
+  // Etiquetas que nunca son el nombre del producto.
+  const NOT_NAME = /\$|^stock$|stock\s*:?\s*\d|disponible|inventario|agregar|importar|ver m[aá]s|bodega|proveedor|provider|precio|enviar a cliente|verificado|variable|^nuevo$|^oferta|^promo|^\d+$/i;
+
+  function ownText(el) {
+    return text(el).replace(/\s+/g, " ").trim();
+  }
+
+  /**
+   * Lee las tarjetas de producto visibles en un catálogo de Dropi.
+   * Soporta "Stock: 958" en un solo texto y también "Stock" y "958" en elementos separados
+   * (así lo muestra Dropi Chile). Devuelve [{ key, name, stock, prices[], url, image, warehouse, supplier }].
+   */
   function parseDropiCards(rootEl) {
+    const doc = rootEl.ownerDocument || rootEl;
     const seen = new Set();
     const out = [];
-    for (const tn of walkTextNodes(rootEl)) {
-      const m = (tn.nodeValue || "").match(STOCK_RE);
+    // 1) Elementos chicos cuyo texto completo es "Stock 958", "Stock: 958", "Disponibles 37"...
+    const stockEls = [];
+    for (const el of rootEl.querySelectorAll("*")) {
+      if (el.closest && el.closest(".catalejo-badge, .catalejo-adbar, #catalejo-indicator")) continue;
+      const t = ownText(el);
+      if (t.length > 40) continue;
+      const m = t.match(/^(?:stock|disponibles?|inventario)\s*:?\s*([\d.,]+)\s*(?:unid(?:ades)?\.?)?$/i);
       if (!m) continue;
-      // La tarjeta: el ancestro más chico que tiene una imagen o un link y un precio.
-      const card = closestMatching(tn.parentElement, (el) => /\$\s*\d/.test(text(el)) && (el.querySelector("img") || el.querySelector("a[href]")));
+      // Quedarse con el elemento más interno que cumple (si un hijo también cumple, se usa el hijo).
+      if ([...el.children].some((c) => /^(?:stock|disponibles?|inventario)\s*:?\s*[\d.,]+/i.test(ownText(c)))) continue;
+      stockEls.push({ el, value: m[1] });
+    }
+    // 1b) "Stock" solo en un elemento y el número en el elemento siguiente (hermanos).
+    const already = new Set(stockEls.map((x) => x.el));
+    for (const el of rootEl.querySelectorAll("*")) {
+      if (!/^(?:stock|disponibles?|inventario)\s*:?$/i.test(ownText(el)) || el.children.length) continue;
+      let sib = el.nextSibling, val = null;
+      while (sib && val === null) {
+        const t = (sib.textContent || "").replace(/\s+/g, " ").trim();
+        if (t) val = /^[\d.,]+$/.test(t) ? t : "";
+        sib = sib.nextSibling;
+      }
+      const holder = el.parentElement;
+      if (val && holder && !already.has(holder) && ![...already].some((x) => holder.contains(x))) stockEls.push({ el: holder, value: val });
+    }
+    // En el orden en que aparecen en la página.
+    const order = new Map([...rootEl.querySelectorAll("*")].map((e, i) => [e, i]));
+    stockEls.sort((a, b) => (order.get(a.el) ?? 0) - (order.get(b.el) ?? 0));
+    for (const { el, value } of stockEls) {
+      // 2) La tarjeta: el ancestro más chico con un precio y una imagen o un link.
+      const card = closestMatching(el, (x) => /\$\s*\d/.test(text(x)) && (x.querySelector("img") || x.querySelector("a[href]")), 10);
       if (!card || seen.has(card)) continue;
       seen.add(card);
-      const stock = parseIntCL(m[1]);
+      const stock = parseIntCL(value);
       if (stock === null) continue;
       const prices = [...text(card).matchAll(PRICE_RE)].map((x) => parseIntCL(x[1])).filter((n) => n && n > 0);
-      const heading = card.querySelector("h1,h2,h3,h4,h5,[title]");
-      const nameCandidates = lines(card).filter((l) => !/\$|stock|disponible|inventario|agregar|importar|ver m[aá]s|bodega|proveedor/i.test(l) && l.length >= 4);
-      const name = (heading && (heading.getAttribute("title") || text(heading).trim())) || nameCandidates.sort((a, b) => b.length - a.length)[0] || null;
+      const ls = lines(card);
+      // Proveedor: "Provider: WOWI" o "Proveedor: X", junto o separado ("Provider:" | "WOWI").
+      let supplier = null;
+      for (let i = 0; i < ls.length; i++) {
+        const mm = ls[i].match(/^(?:provider|proveedor)\s*:\s*(.*)$/i);
+        if (mm) { supplier = (mm[1] || ls[i + 1] || "").trim() || null; break; }
+      }
+      const wh = ls.find((l) => /^bodega/i.test(l));
+      const heading = card.querySelector("h1,h2,h3,h4,h5,[title]:not(img)");
+      const headingText = heading ? (heading.getAttribute("title") || ownText(heading)) : "";
+      const nameCandidates = ls.filter((l) => l.length >= 4 && !NOT_NAME.test(l) && l !== supplier);
+      const name = (headingText && !NOT_NAME.test(headingText) ? headingText : null) || nameCandidates.sort((a, b) => b.length - a.length)[0] || null;
       if (!name) continue;
       const a = card.querySelector("a[href]");
       const url = a ? a.getAttribute("href") : null;
       const idMatch = url && url.match(/(?:product(?:o|s)?|id)[\/=-](\d+)/i);
       const img = card.querySelector("img");
-      const wh = lines(card).find((l) => /bodega/i.test(l));
-      const sup = lines(card).find((l) => /^proveedor\s*:/i.test(l));
       const item = {
         key: idMatch ? `dropi:${idMatch[1]}` : `name:${name.toLowerCase().replace(/\s+/g, " ").trim()}`,
         name: name.slice(0, 200),
@@ -120,13 +166,14 @@
         url,
         image: img ? img.getAttribute("src") : null,
         warehouse: wh ? wh.replace(/bodega\s*:?\s*/i, "").trim() : null,
-        supplier: sup ? sup.replace(/^proveedor\s*:\s*/i, "").trim().slice(0, 160) : null,
+        supplier: supplier ? supplier.slice(0, 160) : null,
       };
       Object.defineProperty(item, "el", { value: card, enumerable: false });
       out.push(item);
     }
     return out;
   }
+
 
   // ---------------------------------------------------- Meta Ad Library
 

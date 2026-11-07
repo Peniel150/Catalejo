@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Catalejo",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Ventas estimadas de lo que ves en Dropi Chile y días activos de los anuncios de tu competencia.",
   "action": {
     "default_popup": "popup.html",
@@ -29,7 +29,9 @@
     {
       "matches": [
         "https://dropi.cl/*",
-        "https://*.dropi.cl/*"
+        "https://*.dropi.cl/*",
+        "https://dropi.co/*",
+        "https://*.dropi.co/*"
       ],
       "js": [
         "parsers.js",
