@@ -4,13 +4,19 @@ import { createHash, randomBytes } from "node:crypto";
 
 // Conexión directa a Postgres de Supabase (cadena "Transaction pooler"). Solo en el servidor.
 let _sql: postgres.Sql | null = null;
+// DATABASE_URL (manual) o POSTGRES_URL (la crea la integración Supabase de Vercel; es el pooler).
+function dbUrl() {
+  return process.env.DATABASE_URL || process.env.POSTGRES_URL || "";
+}
 export function hasDatabase() {
-  return !!process.env.DATABASE_URL;
+  return !!dbUrl();
 }
 export function sql() {
   if (!_sql) {
-    if (!process.env.DATABASE_URL) throw new Error("Falta DATABASE_URL");
-    _sql = postgres(process.env.DATABASE_URL, { max: 5, prepare: false, idle_timeout: 20 });
+    const url = dbUrl();
+    if (!url) throw new Error("Falta DATABASE_URL");
+    const local = /@(localhost|127\.0\.0\.1)[:/]/.test(url);
+    _sql = postgres(url, { max: 5, prepare: false, idle_timeout: 20, ssl: local ? false : "require" });
   }
   return _sql;
 }
