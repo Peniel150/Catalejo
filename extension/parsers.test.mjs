@@ -108,9 +108,38 @@ test("Dropi Chile real: Stock y número separados, Provider separado", () => {
   assert.deepEqual(cards.map((c) => [c.name, c.stock, c.supplier]), [
     ["2 Rodillera 2 Codera", 958, "WOWI"],
     ["Caja Plastica Divisiones Movibles", 400, "PRO OUTDOOR GLOBAL"],
-    ["1000g Agente Impermeabilizante Dropi Cup", 2673, "968754918"],
+    ["1000g Agente Impermeabilizante Dropi Cup", 2673, "IMPORTADORA PING +56912345678"],
   ]);
   assert.deepEqual(cards[0].prices, [5900, 14990]);
+});
+
+// Variante: sin <img> ni <a href> (imagen de fondo y botones), número de stock en un nieto del padre,
+// y el nombre comercial arriba de "Provider: +569...". Escrito a mano a partir de una captura.
+const dropiCL2 = `
+<div class="grid">
+  <app-product-card><div class="card"><div class="pic" style="background-image:url(x.jpg)"><span>Premium</span></div>
+    <div class="info"><div class="top"><span>Belleza</span><div><span class="lbl">Stock</span></div><div><span class="ok">80</span></div></div>
+      <div class="name">Crema Alivia Dolor</div>
+      <div class="prov"><div>IMPORTADORA RVG SPA</div><div><span>Provider:</span><span>+56926235005</span></div></div>
+      <div><span>Precio proveedor:</span><span>$ 2.500</span></div><div><span>Precio sugerido</span><span>$ 21.990</span></div>
+      <button>Enviar a cliente</button></div></div></app-product-card>
+  <app-product-card><div class="card"><div class="pic"></div>
+    <div class="info"><div class="top"><span>Belleza</span><span>Stock <span class="ok">294</span></span></div>
+      <div class="name">Plancha Alisador Ondulador 2 En 1</div>
+      <div class="prov"><span>Provider:</span><span>SOLO CACHUREOS</span></div>
+      <div><span>$ 7.990</span><span>$ 24.990</span></div><button>Enviar a cliente</button></div></div></app-product-card>
+</div>`;
+
+test("Dropi Chile: tarjetas sin imagen ni link, stock en otro bloque y proveedor con teléfono", () => {
+  const { document } = parseHTML(`<html><body>${dropiCL2}</body></html>`);
+  const cards = P.parseDropiCards(document.body);
+  assert.deepEqual(cards.map((c) => [c.name, c.stock, c.supplier]), [
+    ["Crema Alivia Dolor", 80, "IMPORTADORA RVG SPA"],
+    ["Plancha Alisador Ondulador 2 En 1", 294, "SOLO CACHUREOS"],
+  ]);
+  const d = P.diagnoseDropi(document.body);
+  assert.equal(d.stockLabels, 2);
+  assert.ok(d.sample.includes("Stock"));
 });
 
 test("catálogo grande (3.000 productos + 30.000 elementos de relleno) se lee rápido", () => {

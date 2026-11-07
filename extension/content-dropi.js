@@ -13,8 +13,21 @@
     if (await C.isPaused()) return;
     const today = C.todaySantiago();
     const cards = P.parseDropiCards(document.body);
-    if (!cards.length) return;
-    C.ensureIndicator(LABEL);
+    const isTop = window === window.top;
+    if (!cards.length && !isTop) return; // en marcos internos solo aparece si hay productos
+    C.ensureIndicator(LABEL); // en la página principal siempre visible: así se sabe que la extensión está activa
+    if (!cards.length) {
+      C.setIndicatorState("Catalejo activo · no veo productos aquí", {
+        label: "Copiar diagnóstico",
+        onClick: async (ev) => {
+          const d = P.diagnoseDropi(document.body);
+          const txt = "Catalejo diagnóstico v" + chrome.runtime.getManifest().version + "\n" + JSON.stringify(d, null, 1);
+          try { await navigator.clipboard.writeText(txt); ev.target.textContent = "Copiado ✓"; }
+          catch (e) { console.log(txt); ev.target.textContent = "Ver consola"; }
+        },
+      });
+      return;
+    }
 
     const { history = {}, queue = [], seenToday = {} } = await chrome.storage.local.get(["history", "queue", "seenToday"]);
     const seen = seenToday.day === today ? seenToday : { day: today, keys: {} };

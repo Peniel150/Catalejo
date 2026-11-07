@@ -91,7 +91,10 @@
    * key = id del producto en la URL si existe, si no, el nombre normalizado.
    */
   // Etiquetas que nunca son el nombre del producto.
-  const NOT_NAME = /\$|^stock$|stock\s*:?\s*\d|disponible|inventario|agregar|importar|ver m[aá]s|bodega|proveedor|provider|precio|enviar a cliente|verificado|variable|^nuevo$|^oferta|^promo|^\d+$/i;
+  const NOT_NAME = /\$|^stock$|stock\s*:?\s*\d|disponible|inventario|agregar|importar|ver m[aá]s|bodega|proveedor|provider|precio|enviar a cliente|verificado|premium|variable|^nuevo$|^oferta|^promo|^[\d.,]+$/i;
+
+  const STOCK_LABEL_RE = /^(?:stock|disponibles?|inventario)\s*:?\s*([\d.,]+)/i;
+  const STOCK_COUNT_RE = /(?:stock|disponibles?|inventario)/gi;
 
   function ownText(el) {
     return text(el).replace(/\s+/g, " ").trim();
@@ -114,23 +117,25 @@
       if (!/(?:stock|disponibles?|inventario)/i.test(raw)) continue;
       const el = tn.parentElement;
       if (!el || (el.closest && el.closest(".catalejo-badge, .catalejo-adbar, #catalejo-indicator"))) continue;
-      // a) "Stock 958" / "Stock: 958" en el mismo texto
-      let m = raw.replace(/\s+/g, " ").trim().match(/^(?:stock|disponibles?|inventario)\s*:?\s*([\d.,]+)/i);
+      let m = null;
       let holder = el;
-      // b) "Stock" y el número dentro del mismo elemento padre chico ("<span>Stock <b>958</b></span>")
-      if (!m) {
-        const t = ownText(el);
-        if (t.length <= 40) m = t.match(/^(?:stock|disponibles?|inventario)\s*:?\s*([\d.,]+)/i);
+      // a/b) "Stock 958", "Stock: 958" o "<span>Stock <b>958</b></span>": se prueba el elemento y hasta 3 padres chicos.
+      for (let up = 0, h = el; h && up < 4 && !m; up++, h = h.parentElement) {
+        const t = ownText(h);
+        if (t.length > 40) break;
+        const mm = t.match(STOCK_LABEL_RE);
+        if (mm) { m = [mm[0], mm[1]]; holder = h; }
       }
       // c) "Stock" solo y el número en un hermano siguiente ("<span>Stock</span><span>400</span>")
       if (!m && /^\s*(?:stock|disponibles?|inventario)\s*:?\s*$/i.test(raw)) {
-        let sib = el.nextSibling;
-        while (sib && !m) {
-          const t = (sib.textContent || "").replace(/\s+/g, " ").trim();
-          if (t) { const mm = t.match(/^([\d.,]+)$/); m = mm ? mm : null; if (!mm) break; }
-          sib = sib.nextSibling;
+        for (let up = 0, h = el; h && up < 3 && !m; up++, h = h.parentElement) {
+          let sib = h.nextSibling;
+          while (sib && !m) {
+            const t = (sib.textContent || "").replace(/\s+/g, " ").trim();
+            if (t) { const mm = t.match(/^([\d.,]+)(?:\s*(?:u|uds?|unidades))?$/i); if (mm) { m = mm; holder = h.parentElement || h; } else break; }
+            sib = sib.nextSibling;
+          }
         }
-        holder = el.parentElement || el;
       }
       if (!m || used.has(holder)) continue;
       used.add(holder);
@@ -139,7 +144,8 @@
     // Ya vienen en el orden en que aparecen en la página.
     for (const { el, value } of stockEls) {
       // 2) La tarjeta: el ancestro más chico con un precio y una imagen o un link.
-      const card = closestMatching(el, (x) => /\$\s*\d/.test(text(x)) && (x.querySelector("img") || x.querySelector("a[href]")), 10);
+      // 2) La tarjeta: el ancestro más chico con un precio que no abarque otra tarjeta (un solo "Stock").
+      const card = closestMatching(el, (x) => { const t = text(x); return /\$\s*\d/.test(t) && (t.match(STOCK_COUNT_RE) || []).length <= 1; }, 12);
       if (!card || seen.has(card)) continue;
       seen.add(card);
       const stock = parseIntCL(value);
@@ -150,13 +156,21 @@
       let supplier = null;
       for (let i = 0; i < ls.length; i++) {
         const mm = ls[i].match(/^(?:provider|proveedor)\s*:\s*(.*)$/i);
-        if (mm) { supplier = (mm[1] || ls[i + 1] || "").trim() || null; break; }
+        if (mm) {
+          supplier = (mm[1] || ls[i + 1] || "").trim() || null;
+          // Dropi a veces muestra el nombre comercial arriba y un teléfono como "Provider".
+          if (supplier && /^\+?[\d\s-]{7,}$/.test(supplier) && i > 0 && !NOT_NAME.test(ls[i - 1]) && /^[^a-z]*[A-Z]{3}[^a-z]*$/.test(ls[i - 1])) supplier = ls[i - 1];
+          break;
+        }
       }
       const wh = ls.find((l) => /^bodega/i.test(l));
       const heading = card.querySelector("h1,h2,h3,h4,h5,[title]:not(img)");
       const headingText = heading ? (heading.getAttribute("title") || ownText(heading)) : "";
-      const nameCandidates = ls.filter((l) => l.length >= 4 && !NOT_NAME.test(l) && l !== supplier);
-      const name = (headingText && !NOT_NAME.test(headingText) ? headingText : null) || nameCandidates.sort((a, b) => b.length - a.length)[0] || null;
+      const isCand = (l) => l.length >= 4 && !NOT_NAME.test(l) && l !== supplier && !/^\+?[\d\s-]{7,}$/.test(l);
+      // El título va justo después de la fila "Categoría · Stock"; si no, el texto más largo.
+      const stockIdx = ls.findIndex((l) => /^(?:stock|disponibles?|inventario)\b/i.test(l));
+      const afterStock = stockIdx >= 0 ? ls.slice(stockIdx + 1).find(isCand) : null;
+      const name = (headingText && !NOT_NAME.test(headingText) ? headingText : null) || afterStock || ls.filter(isCand).sort((a, b) => b.length - a.length)[0] || null;
       if (!name) continue;
       const a = card.querySelector("a[href]");
       const url = a ? a.getAttribute("href") : null;
@@ -178,6 +192,36 @@
     return out;
   }
 
+
+  /**
+   * Diagnóstico para cuando no se encuentra ningún producto: describe la estructura (etiquetas y clases)
+   * alrededor de la primera etiqueta "Stock". Solo incluye texto del catálogo, nunca datos de la cuenta.
+   */
+  function diagnoseDropi(rootEl) {
+    const doc = rootEl.ownerDocument || rootEl;
+    const info = { url: (doc.location && doc.location.pathname) || "", stockLabels: 0, iframes: doc.querySelectorAll("iframe").length, shadowHosts: 0, prices: 0, sample: "" };
+    let first = null;
+    for (const tn of walkTextNodes(rootEl)) {
+      const v = tn.nodeValue || "";
+      if (/(?:stock|disponibles?|inventario)/i.test(v)) { info.stockLabels++; if (!first) first = tn.parentElement; }
+      if (/\$\s*\d/.test(v)) info.prices++;
+    }
+    for (const e of rootEl.querySelectorAll("*")) if (e.shadowRoot) info.shadowHosts++;
+    let box = first;
+    for (let i = 0; box && i < 6; i++) { if (box.parentElement && text(box.parentElement).length > 1200) break; box = box.parentElement; }
+    const skel = (n, depth) => {
+      if (depth > 14) return "";
+      if (n.nodeType === 3) { const t = n.nodeValue.replace(/\s+/g, " ").trim(); return t ? t.slice(0, 60) : ""; }
+      if (n.nodeType !== 1) return "";
+      const tag = n.tagName.toLowerCase();
+      if (tag === "svg" || tag === "script" || tag === "style") return `<${tag}/>`;
+      const cls = (n.getAttribute("class") || "").split(/\s+/).filter(Boolean).slice(0, 3).join(".");
+      const kids = [...n.childNodes].map((c) => skel(c, depth + 1)).filter(Boolean).join("");
+      return `<${tag}${cls ? "." + cls : ""}>${kids}</${tag}>`;
+    };
+    info.sample = box ? skel(box, 0).slice(0, 6000) : "";
+    return info;
+  }
 
   // ---------------------------------------------------- Meta Ad Library
 
@@ -254,7 +298,7 @@
     return Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 86400000);
   }
 
-  const api = { parseDate, parseIntCL, parseDropiCards, parseMetaAds, estimateFromHistory, daysBetween, decodeOutbound };
+  const api = { parseDate, parseIntCL, parseDropiCards, diagnoseDropi, parseMetaAds, estimateFromHistory, daysBetween, decodeOutbound };
   root.CatalejoParsers = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

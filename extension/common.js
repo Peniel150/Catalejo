@@ -12,8 +12,10 @@
 
   async function isPaused() {
     if (!alive()) return true; // la extensión se recargó: este script viejo deja de trabajar
-    const { paused } = await chrome.storage.local.get("paused");
-    return !!paused;
+    try {
+      const { paused } = await chrome.storage.local.get("paused");
+      return !!paused;
+    } catch (e) { return true; }
   }
 
   /** Ejecuta fn cuando la página cambia (el usuario hace scroll o filtra), con espera para no recalcular de más. */
@@ -22,7 +24,11 @@
     let obs = null;
     const safe = async () => {
       if (!alive()) { if (obs) obs.disconnect(); return; }
-      try { await fn(); } catch (e) { console.warn("[Catalejo]", e && e.message ? e.message : e); }
+      try { await fn(); } catch (e) {
+        const msg = e && e.message ? e.message : String(e);
+        if (/context invalidated/i.test(msg)) { if (obs) obs.disconnect(); return; } // pestaña vieja tras actualizar: se apaga en silencio
+        console.warn("[Catalejo]", msg);
+      }
     };
     const run = () => { clearTimeout(t); t = setTimeout(safe, wait); };
     const OWN = ".catalejo-badge, .catalejo-adbar, #catalejo-indicator";
@@ -69,10 +75,24 @@
     return box;
   }
 
-  function setIndicatorCount(n, label) {
-    const t = document.querySelector("#catalejo-indicator .catalejo-ind-text");
-    if (t && !document.getElementById("catalejo-indicator").classList.contains("is-paused")) t.textContent = `${label} · ${n} hoy`;
+  /** Cambia el texto del indicador y, si se pide, muestra un botón extra (p. ej. "Copiar diagnóstico"). */
+  function setIndicatorState(textValue, action) {
+    const box = document.getElementById("catalejo-indicator");
+    if (!box || box.classList.contains("is-paused")) return;
+    box.querySelector(".catalejo-ind-text").textContent = textValue;
+    let extra = box.querySelector(".catalejo-ind-extra");
+    if (!action) { if (extra) extra.remove(); return; }
+    if (!extra) {
+      extra = el("button", "catalejo-ind-btn catalejo-ind-extra", action.label);
+      extra.type = "button";
+      box.insertBefore(extra, box.lastChild);
+    }
+    extra.onclick = action.onClick;
   }
 
-  globalThis.CatalejoCommon = { todaySantiago, isPaused, onPageChange, el, ensureIndicator, setIndicatorCount };
+  function setIndicatorCount(n, label) {
+    setIndicatorState(`${label} · ${n} hoy`, null);
+  }
+
+  globalThis.CatalejoCommon = { todaySantiago, isPaused, onPageChange, el, ensureIndicator, setIndicatorCount, setIndicatorState };
 })();
