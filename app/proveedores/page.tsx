@@ -13,7 +13,7 @@ export default async function SuppliersPage() {
       <PageHeader title="Proveedores que entregan" sub="Entrega efectiva, devoluciones y tiempo de despacho de cada proveedor de Dropi Chile." actions={<ButtonLink href="/importar" variant="primary">Aportar mis pedidos</ButtonLink>} />
       <DemoNotice />
       <p className="mb-4 text-xs text-text-muted">Se calcula con los reportes de pedidos que los dropshippers suben desde su cuenta de Dropi, con su permiso. Un proveedor aparece medido desde 20 pedidos; antes, verás “s/d”.</p>
-      <div className="card overflow-x-auto">
+      <div className="card overflow-x-auto" tabIndex={0} role="region" aria-label="Tabla de proveedores (desplázate a los lados)">
         <table className="w-full min-w-[720px] border-collapse">
           <caption className="sr-only">Ranking de proveedores por entrega efectiva</caption>
           <thead>

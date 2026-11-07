@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { getCategories, getRadar } from "@/lib/data.ts";
-import type { RadarFilters as RF } from "@/lib/types.ts";
+import { parseRadarFilters } from "@/lib/params.ts";
 import { fmtCLP, fmtInt, fmtPct } from "@/lib/format.ts";
 import { DeliveryBadge, DemoNotice, EmptyState, Growth, PageHeader, SaturationText, ScoreBadge, Stat, ButtonLink } from "@/components/ui.tsx";
 import { Sparkline } from "@/components/charts.tsx";
@@ -11,23 +11,9 @@ import { RadarFilters } from "@/components/filters.tsx";
 export const metadata: Metadata = { title: "Radar" };
 
 type SP = Promise<Record<string, string | string[] | undefined>>;
-const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
 export default async function RadarPage({ searchParams }: { searchParams: SP }) {
-  const sp = await searchParams;
-  const sat = one(sp.saturation);
-  const sort = one(sp.sort);
-  const filters: RF = {
-    q: one(sp.q),
-    category: one(sp.category) || undefined,
-    minDelivery: one(sp.minDelivery) ? Number(one(sp.minDelivery)) : undefined,
-    minStock: one(sp.minStock) ? Number(one(sp.minStock)) : undefined,
-    saturation: sat === "baja" || sat === "media" || sat === "alta" ? sat : undefined,
-    withAds: !!one(sp.withAds),
-    restocked: !!one(sp.restocked),
-    newOnly: !!one(sp.newOnly),
-    sort: (["score", "effective", "growth", "newest", "margin"] as const).find((s) => s === sort),
-  };
+  const filters = parseRadarFilters(await searchParams);
   const [{ rows, total }, categories] = await Promise.all([getRadar(filters), getCategories()]);
   const all = (await getRadar()).rows;
   const strong = all.filter((r) => r.score.score >= 70).length;
@@ -53,7 +39,7 @@ export default async function RadarPage({ searchParams }: { searchParams: SP }) 
         <>
           <p className="mb-2 text-xs text-text-muted" aria-live="polite">{rows.length} de {total} productos</p>
           {/* Escritorio: tabla */}
-          <div className="card hidden overflow-x-auto md:block">
+          <div className="card hidden overflow-x-auto md:block" tabIndex={0} role="region" aria-label="Tabla de productos (desplázate a los lados)">
             <table className="w-full min-w-[1180px] border-collapse">
               <caption className="sr-only">Productos ordenados</caption>
               <thead>

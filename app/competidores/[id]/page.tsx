@@ -12,7 +12,8 @@ import { dayDiff } from "@/lib/score.ts";
 type P = Promise<{ id: string }>;
 export async function generateMetadata({ params }: { params: P }): Promise<Metadata> {
   const c = await getCompetitor((await params).id);
-  return { title: c?.name ?? "Competidor" };
+  if (!c) notFound();
+  return { title: c.name };
 }
 
 export default async function CompetitorPage({ params }: { params: P }) {

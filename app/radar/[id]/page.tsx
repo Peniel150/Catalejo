@@ -14,7 +14,8 @@ type P = Promise<{ id: string }>;
 
 export async function generateMetadata({ params }: { params: P }): Promise<Metadata> {
   const d = await getProduct((await params).id);
-  return { title: d?.product.name ?? "Producto" };
+  if (!d) notFound(); // antes de empezar a transmitir la página, para que responda 404
+  return { title: d.product.name };
 }
 
 export default async function ProductPage({ params, searchParams }: { params: P; searchParams: Promise<{ tab?: string }> }) {
