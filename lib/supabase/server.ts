@@ -7,6 +7,17 @@ export function authEnabled() {
   return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
 
+/**
+ * Cliente solo para ENVIAR el correo de acceso, con flowType "implicit": el enlace trae la sesión
+ * en el fragmento (#access_token=...), así funciona aunque se abra en otro navegador o en la app de correo.
+ * (@supabase/ssr fuerza PKCE, que exige abrir el enlace en el mismo navegador.)
+ */
+export function supabaseMailer() {
+  return createAdmin(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+    auth: { flowType: "implicit", persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
 export async function supabaseServer() {
   const store = await cookies();
   return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {

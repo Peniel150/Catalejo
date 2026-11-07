@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 // Aplica el tema guardado antes de pintar, para evitar el parpadeo.
-const themeScript = `try{var t=localStorage.getItem("catalejo-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}`;
+const themeScript = `try{var t=localStorage.getItem("catalejo-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}if(/access_token=|error_description=/.test(location.hash)&&location.pathname!=="/auth/entrar"){location.replace("/auth/entrar"+location.hash)}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
