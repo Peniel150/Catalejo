@@ -33,5 +33,5 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   // Archivos públicos (imágenes de la portada, íconos, imagen para compartir) no pasan por el login.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|opengraph-image|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt|xml)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|opengraph-image|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt|xml|zip)$).*)"],
 };

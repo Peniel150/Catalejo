@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BarChart3, Bookmark, Calculator, Flag, Megaphone, Menu, Moon, Settings, Star, Sun, Truck, Upload, X } from "lucide-react";
+import { BarChart3, Bookmark, Calculator, Puzzle, Flag, Megaphone, Menu, Moon, Settings, Star, Sun, Truck, Upload, X } from "lucide-react";
 
 const items = [
   { href: "/radar", label: "Radar", icon: BarChart3 },
@@ -12,6 +12,7 @@ const items = [
   { href: "/seguimiento", label: "Seguimiento", icon: Star },
   { href: "/importar", label: "Importar pedidos", icon: Upload },
   { href: "/herramientas", label: "Calculadora COD", icon: Calculator },
+  { href: "/extension", label: "Extensión", icon: Puzzle },
   { href: "/ajustes", label: "Ajustes", icon: Settings },
 ];
 

@@ -8,7 +8,7 @@ let browser;
 before(async () => { browser = await chromium.launch(); });
 after(async () => { await browser?.close(); });
 
-const SCREENS = ["/", "/radar", "/radar/p-1", "/radar/p-1?tab=anuncios", "/radar/p-1?tab=proveedor", "/proveedores", "/competidores", "/competidores/comp-1", "/anuncios", "/herramientas", "/seguimiento", "/importar", "/ajustes", "/privacidad", "/terminos"];
+const SCREENS = ["/", "/extension", "/radar", "/radar/p-1", "/radar/p-1?tab=anuncios", "/radar/p-1?tab=proveedor", "/proveedores", "/competidores", "/competidores/comp-1", "/anuncios", "/herramientas", "/seguimiento", "/importar", "/ajustes", "/privacidad", "/terminos"];
 
 test("A11Y y estabilidad: cada pantalla sin errores, sin 5xx, accesible, en claro, oscuro y móvil", async () => {
   for (const scheme of ["light", "dark"]) {

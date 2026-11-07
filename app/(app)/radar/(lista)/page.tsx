@@ -7,6 +7,7 @@ import { fmtCLP, fmtInt, fmtPct } from "@/lib/format.ts";
 import { DeliveryBadge, DemoNotice, EmptyState, Growth, PageHeader, SaturationText, ScoreBadge, Stat, ButtonLink } from "@/components/ui.tsx";
 import { Sparkline } from "@/components/charts.tsx";
 import { RadarFilters } from "@/components/filters.tsx";
+import { RadarOnboarding } from "@/components/onboarding.tsx";
 import { FollowButton } from "@/components/follow.tsx";
 import { getTrackedIds, isDemo, getPlan } from "@/lib/data.ts";
 import { PLANS } from "@/lib/plans.ts";
@@ -41,7 +42,9 @@ export default async function RadarPage({ searchParams }: { searchParams: SP }) 
       </section>
       <Suspense fallback={<div className="skeleton mb-4 h-10" />}><RadarFilters categories={categories} /></Suspense>
 
-      {rows.length === 0 ? (
+      {total === 0 ? (
+        <RadarOnboarding />
+      ) : rows.length === 0 ? (
         <EmptyState title="No hay productos con estos filtros" body="Prueba otra categoría, baja el stock mínimo o quita el filtro de entrega del proveedor." action={<ButtonLink href="/radar" variant="primary">Limpiar filtros</ButtonLink>} />
       ) : (
         <>

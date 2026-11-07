@@ -11,7 +11,8 @@
     "test:db": "bash supabase/tests/run.sh",
     "db:migrate": "for f in supabase/migrations/*.sql; do psql \"$DATABASE_URL\" -v ON_ERROR_STOP=1 -f \"$f\"; done",
     "e2e": "node --test --test-concurrency=1 e2e/app.e2e.mjs e2e/extension.e2e.mjs",
-    "demo": "node demo/build.mjs"
+    "demo": "node demo/build.mjs",
+    "extension:zip": "cd extension && rm -f ../public/catalejo-extension.zip && zip -qr ../public/catalejo-extension.zip . -x \"*.test.mjs\""
   },
   "dependencies": {
     "@supabase/ssr": "^0.6.1",
