@@ -142,6 +142,44 @@ test("Dropi Chile: tarjetas sin imagen ni link, stock en otro bloque y proveedor
   assert.ok(d.sample.includes("Stock"));
 });
 
+// Catálogo real de Dropi Chile (estructura del diagnóstico): stock y precios dibujados en <canvas>.
+const dropiCanvas = `
+<div class="grid">
+  <app-card-product class="grid-item"><div class="card-box"><div class="card-box-vertical"><app-card-image><div class="box-img"><img class="card-image__img" src="h.jpg"></div></app-card-image></div>
+    <div class="card-content"><div class="card-info-top"><div class="category-stock"><div>Cocina</div><div class="stock-container"><span>Stock</span><canvas></canvas></div></div>
+      <h3 class="tittle-product"> Hervidor De Huevos </h3><div class="provider-data"><span>Provider:</span><span class="provider-name"> Inversiones DKC </span></div>
+      <div class="card-prices"><div><div>Precio proveedor:</div><div class="price"><canvas></canvas></div></div><div><div>Precio sugerido</div><div class="price"><canvas></canvas></div></div></div></div>
+      <button><div>Enviar a cliente</div></button></div></div></app-card-product>
+  <app-card-product class="grid-item"><div class="card-box"><div class="card-content"><div class="category-stock"><div>Cocina</div><div class="stock-container"><span>Stock</span><canvas></canvas></div></div>
+      <h3 class="tittle-product"> Vaso Termico De Acero Inoxidable </h3><div><span>Provider:</span><span> Importadora Tendenza </span></div><button><div>Enviar a cliente</div></button></div></div></app-card-product>
+</div>
+<div class="filter"><p>Stock:</p><span>Cantidad</span></div>`;
+
+test("Dropi Chile catálogo con canvas: tarjetas sin stock, con nombre y proveedor", () => {
+  const { document } = parseHTML(`<html><body>${dropiCanvas}</body></html>`);
+  const cards = P.parseDropiCards(document.body);
+  assert.deepEqual(cards.map((c) => [c.key, c.stock, c.supplier]), [
+    ["name:hervidor de huevos", null, "Inversiones DKC"],
+    ["name:vaso termico de acero inoxidable", null, "Importadora Tendenza"],
+  ]);
+});
+
+const dropiDetail = `<main><h1> Hervidor De Huevos </h1><img src="p.jpg"><div><span>$ 7.990</span><span>$ 14.990</span></div>
+  <div><span class="attribute">Stock</span><span> 16 </span></div><div><span> Stock Privado: </span><span> 0 </span></div>
+  <button> Enviar al cliente </button><p>Vendido por:</p><p> Inversiones DKC </p><p>Bodegas: </p><p>LA CISTERNA</p><h3>Detalles</h3></main>`;
+
+test("Dropi Chile ficha de producto: stock en texto, proveedor y bodega; misma clave que en el catálogo", () => {
+  const { document } = parseHTML(`<html><body>${dropiDetail}</body></html>`);
+  const d = P.parseDropiDetail(document, "/dashboard/product-details/20770/hervidor-de-huevos");
+  assert.equal(d.key, "name:hervidor de huevos");
+  assert.equal(d.id, "20770");
+  assert.equal(d.stock, 16);
+  assert.equal(d.supplier, "Inversiones DKC");
+  assert.equal(d.warehouse, "LA CISTERNA");
+  assert.deepEqual(d.prices, [7990, 14990]);
+  assert.equal(P.parseDropiDetail(document, "/dashboard/search"), null);
+});
+
 test("catálogo grande (3.000 productos + 30.000 elementos de relleno) se lee rápido", () => {
   const card = (i) => `<div class="product-card"><img src="${i}.jpg"><div><span>Hogar</span><span>Stock</span><span>${100 + i}</span></div><p>Producto de prueba número ${i}</p><p><span>Provider:</span><a>Prov ${i % 9}</a></p><span>$ 1.990</span><b>$ 4.990</b></div>`;
   const filler = Array.from({ length: 30000 }, (_, i) => `<i>x${i}</i>`).join("");

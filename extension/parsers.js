@@ -172,7 +172,16 @@
           }
         }
       }
-      if (!m || used.has(holder)) continue;
+      if (!m) {
+        // e) "Stock" sin número en texto: Dropi Chile dibuja el número como imagen (canvas) en el catálogo.
+        //    Se registra la tarjeta sin stock; el stock se toma en la ficha del producto, donde sí viene como texto.
+        if (/^\s*(?:stock|disponibles?|inventario)\s*$/i.test(raw) && el.parentElement && !used.has(el.parentElement)) {
+          used.add(el.parentElement);
+          stockEls.push({ el: el.parentElement, value: null });
+        }
+        continue;
+      }
+      if (used.has(holder)) continue;
       used.add(holder);
       stockEls.push({ el: holder, value: m[1] });
     }
@@ -184,9 +193,9 @@
       const card = cardOf(el, tooBig);
       if (!card || seen.has(card)) continue;
       seen.add(card);
-      const stock = parseIntCL(value);
-      if (stock === null) continue;
+      const stock = value == null ? null : parseIntCL(value);
       const ls = lines(card);
+      if (stock === null && !ls.some((l) => /^(?:provider|proveedor)\b/i.test(l))) continue; // sin número: solo tarjetas de producto reales
       let prices = [...text(card).matchAll(PRICE_RE)].map((x) => parseIntCL(x[1])).filter((n) => n && n > 0);
       if (!prices.length) {
         // Sin "$" pegado al número: se toma el primer número después de cada "Precio ...".
@@ -223,7 +232,7 @@
       const idMatch = url && url.match(/(?:product(?:o|s)?|id)[\/=-](\d+)/i);
       const img = card.querySelector("img");
       const item = {
-        key: idMatch ? `dropi:${idMatch[1]}` : `name:${name.toLowerCase().replace(/\s+/g, " ").trim()}`,
+        key: idMatch ? `dropi:${idMatch[1]}` : productKey(name),
         name: name.slice(0, 200),
         stock,
         prices,
@@ -236,6 +245,50 @@
       out.push(item);
     }
     return out;
+  }
+
+  const productKey = (name) => `name:${name.toLowerCase().replace(/\s+/g, " ").trim()}`;
+
+  /**
+   * Ficha de un producto de Dropi (/product-details/<id>/<slug>): ahí el stock sí viene como texto.
+   * Devuelve { key, id, name, stock, prices[], url, image, warehouse, supplier } o null.
+   */
+  function parseDropiDetail(doc, pathname) {
+    const pm = (pathname || "").match(/\/product-details\/(\d+)(?:\/([^/?#]+))?/);
+    if (!pm || !doc.body) return null;
+    const vals = [];
+    for (const tn of walkTextNodes(doc.body)) {
+      const p = tn.parentElement;
+      if (p && p.closest && p.closest(".catalejo-badge, .catalejo-adbar, #catalejo-indicator, style, script")) continue;
+      const v = (tn.nodeValue || "").replace(/\s+/g, " ").trim();
+      if (v) vals.push({ v, el: p });
+    }
+    const after = (re) => { const i = vals.findIndex((x) => re.test(x.v)); return i >= 0 && vals[i + 1] ? { i, next: vals[i + 1] } : null; };
+    let stock = null, holder = null;
+    for (let i = 0; i < vals.length; i++) {
+      const own = vals[i].v.match(/^stock\s*:?\s*([\d.,]+)$/i);
+      if (own) { stock = parseIntCL(own[1]); holder = vals[i].el; break; }
+      if (/^stock\s*:?$/i.test(vals[i].v) && vals[i + 1] && /^[\d.,]+$/.test(vals[i + 1].v)) {
+        stock = parseIntCL(vals[i + 1].v);
+        holder = vals[i].el;
+        while (holder && !holder.contains(vals[i + 1].el)) holder = holder.parentElement;
+        break;
+      }
+    }
+    if (stock === null) return null;
+    const sup = after(/^(?:vendido por|provider|proveedor)\s*:?$/i);
+    const wh = after(/^bodegas?\s*:?$/i);
+    const slugName = pm[2] ? decodeURIComponent(pm[2]).replace(/-+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : null;
+    const h = [...doc.querySelectorAll("h1,h2,h3")].map((x) => ownText(x)).find((t) => t.length >= 4 && !NOT_NAME.test(t) && t.toLowerCase() !== "detalles");
+    const name = (h || slugName || "").slice(0, 200);
+    if (!name) return null;
+    const prices = [];
+    for (const x of vals) { const m = x.v.match(/\$\s*([\d.]+)/); if (m) { const n = parseIntCL(m[1]); if (n) prices.push(n); } if (prices.length >= 2) break; }
+    const img = doc.querySelector("main img, img");
+    return {
+      key: productKey(name), id: pm[1], name, stock, prices, url: pathname, image: img ? img.getAttribute("src") : null,
+      warehouse: wh ? wh.next.v.slice(0, 120) : null, supplier: sup ? sup.next.v.slice(0, 160) : null, holder,
+    };
   }
 
 
@@ -354,7 +407,7 @@
     return Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 86400000);
   }
 
-  const api = { parseDate, parseIntCL, parseDropiCards, diagnoseDropi, parseMetaAds, estimateFromHistory, daysBetween, decodeOutbound };
+  const api = { parseDate, parseIntCL, parseDropiCards, parseDropiDetail, diagnoseDropi, parseMetaAds, estimateFromHistory, daysBetween, decodeOutbound };
   root.CatalejoParsers = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
