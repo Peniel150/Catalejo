@@ -1,0 +1,16 @@
+/* Estilos de Catalejo dentro de páginas de terceros: todo con prefijo y sin tocar sus estilos. */
+.catalejo-indicator { position: fixed; right: 16px; bottom: 16px; z-index: 2147483000; display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 999px; background: #0e1116; color: #e8ebf0; font: 500 12px/16px system-ui, sans-serif; box-shadow: 0 12px 32px rgba(16,24,40,.25); }
+.catalejo-dot { width: 8px; height: 8px; border-radius: 50%; background: #4fd1bf; }
+.catalejo-indicator.is-paused .catalejo-dot { background: #9aa3b0; }
+.catalejo-ind-btn { all: unset; cursor: pointer; padding: 2px 8px; border-radius: 999px; border: 1px solid #6b7482; }
+.catalejo-ind-btn:focus-visible, .catalejo-btn:focus-visible { outline: 2px solid #4fd1bf; outline-offset: 2px; }
+.catalejo-badge { display: inline-block; margin: 4px 0; padding: 2px 8px; border-radius: 999px; background: #dff3e8; color: #13603b;
+  font: 600 11px/16px system-ui, sans-serif; }
+.catalejo-adbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; font: 500 12px/16px system-ui, sans-serif; }
+.catalejo-pill { padding: 2px 8px; border-radius: 999px; background: #eef0f3; color: #14171c; font-weight: 600; }
+.catalejo-pill.is-high { background: #dff3e8; color: #13603b; }
+.catalejo-pill.is-mid { background: #fdf0d5; color: #8a5300; }
+.catalejo-pill.is-low { background: #fbe3e3; color: #a32a2a; }
+.catalejo-btn { all: unset; cursor: pointer; padding: 2px 8px; border-radius: 6px; border: 1px solid #0b6e64; color: #0b6e64; background: #fff; }
+.catalejo-btn[disabled] { opacity: .6; cursor: default; }

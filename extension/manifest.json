@@ -1,0 +1,59 @@
+{
+  "manifest_version": 3,
+  "name": "Catalejo",
+  "version": "0.1.0",
+  "description": "Ventas estimadas de lo que ves en Dropi Chile y días activos de los anuncios de tu competencia.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Catalejo",
+    "default_icon": {
+      "16": "icons/16.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://dropi.cl/*",
+        "https://*.dropi.cl/*"
+      ],
+      "js": [
+        "parsers.js",
+        "common.js",
+        "content-dropi.js"
+      ],
+      "css": [
+        "overlay.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.facebook.com/ads/library/*"
+      ],
+      "js": [
+        "parsers.js",
+        "common.js",
+        "content-adlibrary.js"
+      ],
+      "css": [
+        "overlay.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
