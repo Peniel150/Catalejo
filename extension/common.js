@@ -6,7 +6,12 @@
     return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   }
 
+  function alive() {
+    try { return !!(chrome.runtime && chrome.runtime.id); } catch (e) { return false; }
+  }
+
   async function isPaused() {
+    if (!alive()) return true; // la extensión se recargó: este script viejo deja de trabajar
     const { paused } = await chrome.storage.local.get("paused");
     return !!paused;
   }
@@ -14,16 +19,22 @@
   /** Ejecuta fn cuando la página cambia (el usuario hace scroll o filtra), con espera para no recalcular de más. */
   function onPageChange(fn, wait = 1200) {
     let t = null;
-    const run = () => { clearTimeout(t); t = setTimeout(fn, wait); };
+    let obs = null;
+    const safe = async () => {
+      if (!alive()) { if (obs) obs.disconnect(); return; }
+      try { await fn(); } catch (e) { console.warn("[Catalejo]", e && e.message ? e.message : e); }
+    };
+    const run = () => { clearTimeout(t); t = setTimeout(safe, wait); };
     const OWN = ".catalejo-badge, .catalejo-adbar, #catalejo-indicator";
-    new MutationObserver((records) => {
+    obs = new MutationObserver((records) => {
       // Ignora los cambios que hace la propia extensión, para no entrar en un ciclo.
       const external = records.some((r) => {
         const t = r.target.nodeType === 1 ? r.target : r.target.parentElement;
         return !(t && t.closest && t.closest(OWN));
       });
       if (external) run();
-    }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    });
+    obs.observe(document.body, { childList: true, subtree: true, characterData: true });
     run();
   }
 

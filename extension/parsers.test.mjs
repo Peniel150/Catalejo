@@ -113,6 +113,18 @@ test("Dropi Chile real: Stock y número separados, Provider separado", () => {
   assert.deepEqual(cards[0].prices, [5900, 14990]);
 });
 
+test("catálogo grande (3.000 productos + 30.000 elementos de relleno) se lee rápido", () => {
+  const card = (i) => `<div class="product-card"><img src="${i}.jpg"><div><span>Hogar</span><span>Stock</span><span>${100 + i}</span></div><p>Producto de prueba número ${i}</p><p><span>Provider:</span><a>Prov ${i % 9}</a></p><span>$ 1.990</span><b>$ 4.990</b></div>`;
+  const filler = Array.from({ length: 30000 }, (_, i) => `<i>x${i}</i>`).join("");
+  const { document } = parseHTML(`<html><body><nav>${filler}</nav><div>${Array.from({ length: 3000 }, (_, i) => card(i)).join("")}</div></body></html>`);
+  const t0 = performance.now();
+  const cards = P.parseDropiCards(document.body);
+  const ms = performance.now() - t0;
+  assert.equal(cards.length, 3000);
+  assert.equal(cards[2999].stock, 3099);
+  assert.ok(ms < 3000, `tardó ${Math.round(ms)} ms`);
+});
+
 test("estimación desde historial local: bajas = ventas, subidas = reposición", () => {
   const r = P.estimateFromHistory({ "2026-11-01": 100, "2026-11-03": 80, "2026-11-04": 200, "2026-11-06": 190 }, "2026-11-06");
   assert.equal(r.units7, 30);

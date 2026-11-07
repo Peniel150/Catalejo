@@ -47,7 +47,8 @@
   }
 
   function text(el) {
-    return (el && (el.innerText !== undefined && el.innerText !== "" ? el.innerText : el.textContent)) || "";
+    // textContent no obliga al navegador a recalcular el diseño (innerText sí, y es muy lento en páginas grandes).
+    return (el && el.textContent) || "";
   }
 
   /** Líneas de texto por nodo (no depende de cómo el navegador une los elementos en línea). */
@@ -105,34 +106,37 @@
     const doc = rootEl.ownerDocument || rootEl;
     const seen = new Set();
     const out = [];
-    // 1) Elementos chicos cuyo texto completo es "Stock 958", "Stock: 958", "Disponibles 37"...
+    // 1) Se recorren solo los nodos de texto (rápido) buscando la etiqueta "Stock" / "Disponibles" / "Inventario".
     const stockEls = [];
-    for (const el of rootEl.querySelectorAll("*")) {
-      if (el.closest && el.closest(".catalejo-badge, .catalejo-adbar, #catalejo-indicator")) continue;
-      const t = ownText(el);
-      if (t.length > 40) continue;
-      const m = t.match(/^(?:stock|disponibles?|inventario)\s*:?\s*([\d.,]+)\s*(?:unid(?:ades)?\.?)?$/i);
-      if (!m) continue;
-      // Quedarse con el elemento más interno que cumple (si un hijo también cumple, se usa el hijo).
-      if ([...el.children].some((c) => /^(?:stock|disponibles?|inventario)\s*:?\s*[\d.,]+/i.test(ownText(c)))) continue;
-      stockEls.push({ el, value: m[1] });
-    }
-    // 1b) "Stock" solo en un elemento y el número en el elemento siguiente (hermanos).
-    const already = new Set(stockEls.map((x) => x.el));
-    for (const el of rootEl.querySelectorAll("*")) {
-      if (!/^(?:stock|disponibles?|inventario)\s*:?$/i.test(ownText(el)) || el.children.length) continue;
-      let sib = el.nextSibling, val = null;
-      while (sib && val === null) {
-        const t = (sib.textContent || "").replace(/\s+/g, " ").trim();
-        if (t) val = /^[\d.,]+$/.test(t) ? t : "";
-        sib = sib.nextSibling;
+    const used = new Set();
+    for (const tn of walkTextNodes(rootEl)) {
+      const raw = tn.nodeValue || "";
+      if (!/(?:stock|disponibles?|inventario)/i.test(raw)) continue;
+      const el = tn.parentElement;
+      if (!el || (el.closest && el.closest(".catalejo-badge, .catalejo-adbar, #catalejo-indicator"))) continue;
+      // a) "Stock 958" / "Stock: 958" en el mismo texto
+      let m = raw.replace(/\s+/g, " ").trim().match(/^(?:stock|disponibles?|inventario)\s*:?\s*([\d.,]+)/i);
+      let holder = el;
+      // b) "Stock" y el número dentro del mismo elemento padre chico ("<span>Stock <b>958</b></span>")
+      if (!m) {
+        const t = ownText(el);
+        if (t.length <= 40) m = t.match(/^(?:stock|disponibles?|inventario)\s*:?\s*([\d.,]+)/i);
       }
-      const holder = el.parentElement;
-      if (val && holder && !already.has(holder) && ![...already].some((x) => holder.contains(x))) stockEls.push({ el: holder, value: val });
+      // c) "Stock" solo y el número en un hermano siguiente ("<span>Stock</span><span>400</span>")
+      if (!m && /^\s*(?:stock|disponibles?|inventario)\s*:?\s*$/i.test(raw)) {
+        let sib = el.nextSibling;
+        while (sib && !m) {
+          const t = (sib.textContent || "").replace(/\s+/g, " ").trim();
+          if (t) { const mm = t.match(/^([\d.,]+)$/); m = mm ? mm : null; if (!mm) break; }
+          sib = sib.nextSibling;
+        }
+        holder = el.parentElement || el;
+      }
+      if (!m || used.has(holder)) continue;
+      used.add(holder);
+      stockEls.push({ el: holder, value: m[1] });
     }
-    // En el orden en que aparecen en la página.
-    const order = new Map([...rootEl.querySelectorAll("*")].map((e, i) => [e, i]));
-    stockEls.sort((a, b) => (order.get(a.el) ?? 0) - (order.get(b.el) ?? 0));
+    // Ya vienen en el orden en que aparecen en la página.
     for (const { el, value } of stockEls) {
       // 2) La tarjeta: el ancestro más chico con un precio y una imagen o un link.
       const card = closestMatching(el, (x) => /\$\s*\d/.test(text(x)) && (x.querySelector("img") || x.querySelector("a[href]")), 10);
