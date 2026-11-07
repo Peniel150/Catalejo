@@ -1,0 +1,22 @@
+@import "./tokens.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-bg text-text font-sans text-sm antialiased; }
+  :focus-visible { outline: 2px solid var(--c-focus); outline-offset: 2px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+}
+@layer components {
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .card { @apply bg-bg border border-border rounded-lg shadow-card; }
+  .skeleton { @apply bg-surface-2 rounded-sm animate-pulse; }
+  .input { @apply h-10 w-full rounded-md border border-border-input bg-bg px-3 text-text placeholder:text-text-muted; }
+  .label { @apply text-xs text-text-muted; }
+  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+}
+
+/* Fuentes cargadas por next/font (Inter y JetBrains Mono, licencia OFL) */
+:root { --font-sans: var(--font-inter), system-ui, -apple-system, Segoe UI, Roboto, sans-serif; --font-mono: var(--font-jb), ui-monospace, SFMono-Regular, Menlo, monospace; }
