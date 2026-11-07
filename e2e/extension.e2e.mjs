@@ -69,7 +69,7 @@ test("E01-H3 Dropi Chile real: el stock se registra en la ficha y se ve en la ta
   const p = await ctx.newPage();
   const errs = []; p.on("pageerror", (e) => errs.push(e.message));
   await p.goto("https://app.dropi.cl/dashboard/search");
-  await p.getByText("Catalejo: abre el producto para registrar su stock").first().waitFor({ timeout: 8000 });
+  await p.getByText("Catalejo: ábrelo para empezar a medir").first().waitFor({ timeout: 8000 });
   assert.equal(await p.locator(".catalejo-badge").count(), 2);
   await p.goto("https://app.dropi.cl/dashboard/product-details/20770/hervidor-de-huevos");
   await p.getByText("stock 16 registrado").waitFor({ timeout: 8000 });
@@ -78,7 +78,9 @@ test("E01-H3 Dropi Chile real: el stock se registra en la ficha y se ve en la ta
   assert.equal(q.stock, 16);
   assert.equal(q.supplier, "Inversiones DKC");
   await p.goto("https://app.dropi.cl/dashboard/search");
-  await p.getByText("Catalejo: stock registrado hoy, vuelve mañana").waitFor({ timeout: 8000 });
+  await p.getByText("Catalejo: medido hoy, vuelve mañana").waitFor({ timeout: 8000 });
+  await p.waitForTimeout(2500); // otra pasada: no debe duplicar etiquetas
+  assert.equal(await p.locator(".catalejo-badge").count(), 2);
   assert.deepEqual(errs, []);
   await p.close();
 });

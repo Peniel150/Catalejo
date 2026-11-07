@@ -99,12 +99,20 @@
   const countStock = (t) => (t.match(STOCK_COUNT_RE) || []).length;
 
   /** La tarjeta: el ancestro más grande que todavía tiene una sola etiqueta "Stock" (el siguiente ya abarca la grilla). */
+  // Texto sin las etiquetas de la propia extensión (para que no cuenten como otra tarjeta).
+  function textNoOwn(el) {
+    const own = el.querySelectorAll ? el.querySelectorAll(".catalejo-badge, .catalejo-adbar, #catalejo-indicator") : [];
+    let t = text(el);
+    for (const o of own) t = t.replace(o.textContent, "");
+    return t;
+  }
+
   function cardOf(el, tooBig) {
     let card = null;
     let cur = el;
     for (let i = 0; cur && i < 14; i++) {
       if (tooBig && tooBig.has(cur)) break; // ya se sabe que abarca varias tarjetas: no se recalcula
-      const t = text(cur);
+      const t = textNoOwn(cur);
       if (countStock(t) > 1 || t.length > 3000) { if (tooBig) tooBig.add(cur); break; }
       card = cur;
       cur = cur.parentElement;

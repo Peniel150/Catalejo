@@ -13,9 +13,9 @@
   const HINT = "Estimado por la caída de stock que has visto. No son ventas confirmadas.";
 
   function badgeText(h, today) {
-    if (!h || !Object.keys(h.days).length) return "Catalejo: abre el producto para registrar su stock";
+    if (!h || !Object.keys(h.days).length) return "Catalejo: ábrelo para empezar a medir";
     const est = P.estimateFromHistory(h.days, today);
-    if (est.daysObserved < 2) return "Catalejo: stock registrado hoy, vuelve mañana";
+    if (est.daysObserved < 2) return "Catalejo: medido hoy, vuelve mañana";
     return `Catalejo: ~${est.units7} ventas 7d${est.restock ? " · repuso" : ""}`;
   }
 
