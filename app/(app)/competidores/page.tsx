@@ -7,6 +7,8 @@ import { AddCompetitor } from "./add.tsx";
 import { revalidatePath } from "next/cache";
 import { asUser, hasDatabase } from "@/lib/server/db.ts";
 import { currentUser } from "@/lib/supabase/server.ts";
+import { getPlan } from "@/lib/data.ts";
+import { PLANS, canAdd } from "@/lib/plans.ts";
 
 async function addCompetitor(fd: FormData) {
   "use server";
@@ -20,6 +22,9 @@ async function addCompetitor(fd: FormData) {
   const pageName = fbMatch?.[2] ?? null;
   const pageId = fbMatch?.[1] ?? null;
   const name = tiktok ?? domain ?? pageName ?? raw;
+  const limit = PLANS[await getPlan()].limits.competitors;
+  const [{ n }] = await asUser(u.id, (tx) => tx`select count(*)::int as n from competitors`);
+  if (!canAdd(limit, n)) throw new Error(`Tu plan permite seguir ${limit} competidor(es).`);
   await asUser(u.id, (tx) => tx`insert into competitors (user_id, name, domain, tiktok_handle, facebook_page_id, facebook_page_name)
     values (${u.id}, ${name}, ${domain}, ${tiktok}, ${pageId}, ${pageName ?? (domain || tiktok ? null : raw)})`);
   revalidatePath("/competidores");

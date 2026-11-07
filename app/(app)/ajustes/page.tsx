@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/ui.tsx";
 import { authEnabled, currentUser, supabaseAdmin } from "@/lib/supabase/server.ts";
 import { asService, asUser, hasDatabase, hashToken, newApiToken } from "@/lib/server/db.ts";
 import { CopyToken } from "./copy-token.tsx";
+import { PLANS, planOf } from "@/lib/plans.ts";
+import { fmtCLP } from "@/lib/format.ts";
 
 export const metadata: Metadata = { title: "Ajustes" };
 export const dynamic = "force-dynamic";
@@ -70,7 +72,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   });
   const { cookies } = await import("next/headers");
   const newToken = (await cookies()).get("cat_new_token")?.value;
-  const planName = { free: "Gratis", basic: "Básico", advanced: "Pro" }[data.sub?.plan as string] ?? "Gratis";
+  const current = planOf(data.sub as never);
 
   return (
     <>
@@ -80,23 +82,27 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         {sp.pago === "error" && <p className="card p-3 text-danger" role="alert">No pudimos conectar con Mercado Pago. Intenta de nuevo.</p>}
         {sp.cancelado && <p className="card p-3" role="status">Suscripción cancelada. No se harán más cobros.</p>}
 
-        <section className="card grid gap-3 p-4" aria-labelledby="h-plan">
-          <h2 id="h-plan" className="text-lg font-semibold">Tu plan: {planName}</h2>
+        <section id="plan" className="card grid gap-3 p-4" aria-labelledby="h-plan">
+          <h2 id="h-plan" className="text-lg font-semibold">Tu plan: {PLANS[current].name}</h2>
           {data.sub?.status === "cancelled" && <p className="text-xs text-text-muted">Cancelada{data.sub.current_period_end ? `, activa hasta ${new Date(data.sub.current_period_end).toLocaleDateString("es-CL")}` : ""}.</p>}
-          <div className="flex flex-wrap gap-2">
-            {data.sub?.plan !== "advanced" && (
-              <form action="/api/billing/checkout" method="post"><input type="hidden" name="plan" value="advanced" />
-                <button className="h-10 rounded-md bg-accent px-4 font-semibold text-on-accent">Pasar a Pro</button></form>
-            )}
-            {data.sub?.plan === "free" && (
-              <form action="/api/billing/checkout" method="post"><input type="hidden" name="plan" value="basic" />
-                <button className="h-10 rounded-md border border-border px-4">Pasar a Básico</button></form>
-            )}
-            {data.sub?.plan !== "free" && data.sub?.status !== "cancelled" && (
-              <form action="/api/billing/cancel" method="post"><button className="h-10 rounded-md border border-border px-4">Cancelar suscripción</button></form>
-            )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(["basic", "advanced"] as const).filter((id) => id !== current).map((id) => (
+              <form key={id} action="/api/billing/checkout" method="post" className="grid gap-2 rounded-md border border-border p-3">
+                <input type="hidden" name="plan" value={id} />
+                <p className="font-semibold">{PLANS[id].name} <span className="text-xs font-normal text-text-muted">· {PLANS[id].forWho}</span></p>
+                <fieldset className="grid gap-1 text-xs">
+                  <legend className="sr-only">Forma de pago</legend>
+                  <label className="flex items-center gap-2"><input type="radio" name="period" value="monthly" defaultChecked className="accent-accent" />{fmtCLP(PLANS[id].monthly)} al mes</label>
+                  <label className="flex items-center gap-2"><input type="radio" name="period" value="yearly" className="accent-accent" />{fmtCLP(PLANS[id].yearly)} al año (2 meses gratis)</label>
+                </fieldset>
+                <button className="h-10 rounded-md bg-accent px-4 font-semibold text-on-accent">Pasar a {PLANS[id].name}</button>
+              </form>
+            ))}
           </div>
-          <p className="text-xs text-text-muted">Pagos con Mercado Pago. Cancelas en un clic, sin llamadas ni formularios.</p>
+          {current !== "free" && data.sub?.status !== "cancelled" && (
+            <form action="/api/billing/cancel" method="post"><button className="h-10 rounded-md border border-border px-4">Cancelar suscripción</button></form>
+          )}
+          <p className="text-xs text-text-muted">Pagos con Mercado Pago, en pesos chilenos. Cancelas en un clic y sigues con tu plan hasta el fin del período pagado. Si no te sirve, te devolvemos el pago dentro de 14 días.</p>
         </section>
 
         <section id="extension" className="card grid gap-3 p-4" aria-labelledby="h-ext">

@@ -5,9 +5,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 const API = "https://api.mercadopago.com";
 
 export type PlanId = "basic" | "advanced";
-export const PLANS: Record<PlanId, { name: string; envAmount: string }> = {
-  basic: { name: "Catalejo Básico", envAmount: "MP_PRICE_BASIC_CLP" },
-  advanced: { name: "Catalejo Pro", envAmount: "MP_PRICE_ADVANCED_CLP" },
+export type Period = "monthly" | "yearly";
+export const MP_PLANS: Record<PlanId, { name: string; env: Record<Period, string> }> = {
+  basic: { name: "Catalejo Básico", env: { monthly: "MP_PRICE_BASIC_CLP", yearly: "MP_PRICE_BASIC_YEARLY_CLP" } },
+  advanced: { name: "Catalejo Pro", env: { monthly: "MP_PRICE_ADVANCED_CLP", yearly: "MP_PRICE_ADVANCED_YEARLY_CLP" } },
 };
 
 function token() {
@@ -16,18 +17,19 @@ function token() {
   return t;
 }
 
-export async function createSubscription(opts: { plan: PlanId; payerEmail: string; userId: string; backUrl: string }) {
-  const amount = Number(process.env[PLANS[opts.plan].envAmount]);
-  if (!Number.isFinite(amount) || amount <= 0) throw new Error(`Falta ${PLANS[opts.plan].envAmount}`);
+export async function createSubscription(opts: { plan: PlanId; period: Period; payerEmail: string; userId: string; backUrl: string }) {
+  const envName = MP_PLANS[opts.plan].env[opts.period];
+  const amount = Number(process.env[envName]);
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error(`Falta ${envName}`);
   const res = await fetch(`${API}/preapproval`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${token()}` },
     body: JSON.stringify({
-      reason: PLANS[opts.plan].name,
-      external_reference: `${opts.userId}:${opts.plan}`,
+      reason: `${MP_PLANS[opts.plan].name} (${opts.period === "yearly" ? "anual" : "mensual"})`,
+      external_reference: `${opts.userId}:${opts.plan}:${opts.period}`,
       payer_email: opts.payerEmail,
       back_url: opts.backUrl,
-      auto_recurring: { frequency: 1, frequency_type: "months", transaction_amount: amount, currency_id: "CLP" },
+      auto_recurring: { frequency: opts.period === "yearly" ? 12 : 1, frequency_type: "months", transaction_amount: amount, currency_id: "CLP" },
       status: "pending",
     }),
   });

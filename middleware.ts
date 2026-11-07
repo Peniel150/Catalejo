@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 // Rutas que no requieren sesión.
-const PUBLIC = [/^\/login/, /^\/auth\//, /^\/api\//, /^\/herramientas/, /^\/privacidad/, /^\/terminos/];
+const PUBLIC = [/^\/$/, /^\/login/, /^\/auth\//, /^\/api\//, /^\/herramientas/, /^\/privacidad/, /^\/terminos/];
 
 export async function middleware(req: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

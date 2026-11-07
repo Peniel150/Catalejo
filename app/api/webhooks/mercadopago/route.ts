@@ -29,11 +29,12 @@ export async function POST(req: Request) {
     try {
       if (type === "subscription_preapproval" && dataId) {
         const sub = await getSubscription(String(dataId));
-        const [userId, plan] = sub.external_reference.split(":");
+        const [userId, plan, periodRaw] = sub.external_reference.split(":");
+        const period = periodRaw === "yearly" ? "yearly" : "monthly";
         if (/^[0-9a-f-]{36}$/.test(userId) && (plan === "basic" || plan === "advanced")) {
           const status = mapStatus(sub.status);
           await sql`update subscriptions set provider = 'mercadopago', provider_subscription_id = ${sub.id}, status = ${status},
-              plan = ${status === "cancelled" ? "free" : plan}, period = 'monthly',
+              plan = ${plan}, period = ${period}, -- si se cancela, planOf() mantiene el plan hasta current_period_end
               current_period_end = ${sub.next_payment_date ?? null}
             where user_id = ${userId}`;
         }

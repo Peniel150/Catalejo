@@ -8,7 +8,8 @@ import { DeliveryBadge, DemoNotice, EmptyState, Growth, PageHeader, SaturationTe
 import { Sparkline } from "@/components/charts.tsx";
 import { RadarFilters } from "@/components/filters.tsx";
 import { FollowButton } from "@/components/follow.tsx";
-import { getTrackedIds, isDemo } from "@/lib/data.ts";
+import { getTrackedIds, isDemo, getPlan } from "@/lib/data.ts";
+import { PLANS } from "@/lib/plans.ts";
 import { toggleFollow } from "../actions.ts";
 
 export const metadata: Metadata = { title: "Radar" };
@@ -17,7 +18,10 @@ type SP = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function RadarPage({ searchParams }: { searchParams: SP }) {
   const filters = parseRadarFilters(await searchParams);
-  const [{ rows, total }, categories, tracked, demo] = await Promise.all([getRadar(filters), getCategories(), getTrackedIds(), isDemo()]);
+  const [{ rows: allRows, total }, categories, tracked, demo, plan] = await Promise.all([getRadar(filters), getCategories(), getTrackedIds(), isDemo(), getPlan()]);
+  const limit = PLANS[plan].limits.radarRows;
+  const rows = limit === null ? allRows : allRows.slice(0, limit);
+  const hidden = allRows.length - rows.length;
   const followAction = demo ? undefined : toggleFollow;
   const all = (await getRadar()).rows;
   const strong = all.filter((r) => r.score.score >= 70).length;
@@ -101,6 +105,12 @@ export default async function RadarPage({ searchParams }: { searchParams: SP }) 
               </li>
             ))}
           </ul>
+          {hidden > 0 && (
+            <div className="card mt-3 flex flex-wrap items-center justify-between gap-3 p-4" role="note">
+              <p><b>{hidden} productos más</b> con estos filtros. El plan Gratis muestra los 10 con mejor puntaje.</p>
+              <ButtonLink href="/ajustes#plan" variant="primary">Ver el radar completo</ButtonLink>
+            </div>
+          )}
           <p className="mt-3 text-xs text-text-muted">Ventas estimadas por caída de stock observada. Efectivas = estimadas × tasa de entrega del proveedor. No son ventas confirmadas.</p>
         </>
       )}

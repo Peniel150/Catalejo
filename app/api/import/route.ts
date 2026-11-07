@@ -4,6 +4,8 @@ import readXlsxFile from "read-excel-file/node";
 import { asService, hasDatabase, rateLimit } from "@/lib/server/db.ts";
 import { currentUser } from "@/lib/supabase/server.ts";
 import { parseCsv, parseDropiReport } from "@/lib/dropi-report.ts";
+import { getPlan } from "@/lib/data.ts";
+import { PLANS } from "@/lib/plans.ts";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -11,6 +13,7 @@ export async function POST(req: Request) {
   if (!hasDatabase()) return NextResponse.json({ error: "La base de datos no está configurada." }, { status: 503 });
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Inicia sesión." }, { status: 401 });
+  if (!PLANS[await getPlan()].limits.importOrders) return NextResponse.json({ error: "Importar pedidos está en los planes Básico y Pro." }, { status: 402 });
   if (!rateLimit(`import:${user.id}`, 10, 60 * 60_000)) return NextResponse.json({ error: "Muchas importaciones seguidas. Espera un rato." }, { status: 429 });
 
   const form = await req.formData().catch(() => null);

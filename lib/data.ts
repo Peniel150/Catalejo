@@ -9,6 +9,7 @@ import { asUser, hasDatabase } from "./server/db.ts";
 import { loadMarketFromDb } from "./server/market.ts";
 import { currentUser } from "./supabase/server.ts";
 import { rankSimilar } from "./similar.ts";
+import { planOf, type PlanId } from "./plans.ts";
 import type { Ad, Competitor, RadarFilters, RadarRow, SavedAd, Supplier, SupplierScore } from "./types.ts";
 
 type Source = {
@@ -131,3 +132,11 @@ export async function getTrackedIds(): Promise<string[]> {
   const rows = await asUser(user.id, (tx) => tx`select market_product_id from tracked_market_products`);
   return rows.map((r) => r.market_product_id as string);
 }
+
+/** Plan efectivo del usuario. En demostración se muestra todo (como Pro). */
+export const getPlan = cache(async (): Promise<PlanId> => {
+  const user = hasDatabase() ? await currentUser() : null;
+  if (!user) return "advanced";
+  const [sub] = await asUser(user.id, (tx) => tx`select plan, status, current_period_end from subscriptions where user_id = ${user.id}`);
+  return planOf(sub as never);
+});
